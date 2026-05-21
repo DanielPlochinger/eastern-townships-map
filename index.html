@@ -997,7 +997,8 @@ function placeVisible(p) {
   const q = searchQuery;
   const searchOk = !q ||
     p.name.toLowerCase().includes(q) ||
-    p.town.toLowerCase().includes(q);
+    p.town.toLowerCase().includes(q) ||
+    (p.description && p.description.toLowerCase().includes(q));
   return catOk && searchOk;
 }
 
