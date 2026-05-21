@@ -228,9 +228,9 @@
 const CATS = {
   'brewery':      { label: 'Breweries',      emoji: '🍺', color: '#DE6965' },
   'vineyard':     { label: 'Vineyards',       emoji: '🍷', color: '#F19E47' },
-  'bike-loop':    { label: 'Bike Loops',      emoji: '🚴', color: '#8575C1' },
+  'bike-loop':    { label: 'Bike Loops',      emoji: '🚴', color: '#478FDE' },
   'village':      { label: 'Villages',        emoji: '🏘️', color: '#7BC380' },
-  'scenic-drive': { label: 'Scenic Drives',   emoji: '🚗', color: '#3376CE' },
+  'scenic-drive': { label: 'Scenic Drives',   emoji: '🚗', color: '#8575C1' },
   'lake':         { label: 'Lakes & Beaches', emoji: '🏖️', color: '#90C7BC' },
   'cafe':         { label: 'Cafés',           emoji: '☕', color: '#C8A16E' },
   'farm-table':   { label: 'Farm-to-Table',   emoji: '🌿', color: '#F4E47F' },
@@ -854,6 +854,13 @@ document.addEventListener('click', function(e) {
 const markerMap = {};
 const circleMap = {};
 
+// Shared opacity/weight constants for both bike-loop circles and scenic-drive polylines
+const DRIVE_DIM  = 0.22;   // default (ghost) state
+const DRIVE_FULL = 1.0;    // selected layer
+const DRIVE_FADE = 0.08;   // other layers while one is selected
+const WEIGHT_DIM = 2.5;
+const WEIGHT_FULL = 4;
+
 function makeIcon(cat) {
   const c = CATS[cat];
   return L.divIcon({
@@ -875,7 +882,8 @@ PLACES.forEach(p => {
     const circle = L.circle([p.lat, p.lng], {
       radius: r,
       color: CATS['bike-loop'].color,
-      weight: 1.5,
+      weight: WEIGHT_DIM,
+      opacity: DRIVE_DIM,
       dashArray: '7 5',
       fillColor: CATS['bike-loop'].color,
       fillOpacity: 0.05,
@@ -892,13 +900,9 @@ PLACES.forEach(p => {
 const scenicPolylines = {};
 const driveColor = CATS['scenic-drive'].color;
 
-const DRIVE_DIM = 0.22;   // default opacity (ghost state)
-const DRIVE_FULL = 1.0;   // selected route opacity
-const DRIVE_FADE = 0.08;  // other routes while one is selected
-
 Object.entries(SCENIC_PATHS).forEach(([id, coords]) => {
   const poly = L.polyline(coords, {
-    color: driveColor, weight: 2.5, opacity: DRIVE_DIM, interactive: false,
+    color: driveColor, weight: WEIGHT_DIM, opacity: DRIVE_DIM, interactive: false,
   });
   poly.addTo(map);
   scenicPolylines[id] = poly;
@@ -908,15 +912,31 @@ function highlightDrive(activeId) {
   Object.entries(scenicPolylines).forEach(([id, poly]) => {
     if (!map.hasLayer(poly)) return;
     poly.setStyle(id === activeId
-      ? { opacity: DRIVE_FULL, weight: 4 }
-      : { opacity: DRIVE_FADE, weight: 2.5 });
+      ? { opacity: DRIVE_FULL, weight: WEIGHT_FULL }
+      : { opacity: DRIVE_FADE, weight: WEIGHT_DIM });
     if (id === activeId) poly.bringToFront();
   });
 }
 
 function resetDriveStyles() {
   Object.values(scenicPolylines).forEach(poly => {
-    poly.setStyle({ opacity: DRIVE_DIM, weight: 2.5 });
+    poly.setStyle({ opacity: DRIVE_DIM, weight: WEIGHT_DIM });
+  });
+}
+
+// Bike-loop circles — same ghost/highlight/fade behaviour as scenic drives
+function highlightBikeLoop(activeId) {
+  Object.entries(circleMap).forEach(([id, circle]) => {
+    if (!map.hasLayer(circle)) return;
+    circle.setStyle(id === activeId
+      ? { opacity: DRIVE_FULL, weight: WEIGHT_FULL }
+      : { opacity: DRIVE_FADE, weight: WEIGHT_DIM });
+  });
+}
+
+function resetBikeStyles() {
+  Object.values(circleMap).forEach(circle => {
+    circle.setStyle({ opacity: DRIVE_DIM, weight: WEIGHT_DIM });
   });
 }
 
@@ -1027,9 +1047,10 @@ function openSheet(id) {
   guideBtn.onclick = () => viewInGuide(id);
   actions.appendChild(guideBtn);
 
-  // Highlight this drive's polyline; reset all others
-  if (p.category === 'scenic-drive') highlightDrive(id);
-  else resetDriveStyles();
+  // Highlight the selected route/circle; ghost everything else
+  if (p.category === 'scenic-drive') { highlightDrive(id); resetBikeStyles(); }
+  else if (p.category === 'bike-loop') { highlightBikeLoop(id); resetDriveStyles(); }
+  else { resetDriveStyles(); resetBikeStyles(); }
 
   document.getElementById('bottom-sheet').classList.add('open');
 }
@@ -1037,6 +1058,7 @@ function openSheet(id) {
 function closeSheet() {
   selectedPlaceId = null;
   resetDriveStyles();
+  resetBikeStyles();
   document.getElementById('bottom-sheet').classList.remove('open');
 }
 
