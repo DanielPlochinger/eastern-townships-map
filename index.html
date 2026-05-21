@@ -89,11 +89,6 @@
       font-size: 13px; width: 30px !important; height: 30px !important;
     }
 
-    /* ── Bottom sheet overlay (no darkening — click-to-close only) ── */
-    .sheet-overlay {
-      position: fixed; inset: 0; background: transparent;
-      z-index: 4000; pointer-events: none;
-    }
 
     /* ── Bottom sheet ── */
     .bottom-sheet {
@@ -207,7 +202,6 @@
 
 <div id="guide-view" class="view"></div>
 
-<div class="sheet-overlay" id="overlay"></div>
 
 <div class="bottom-sheet" id="bottom-sheet">
   <div class="sheet-handle"></div>
@@ -826,8 +820,31 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 }).addTo(map);
 // Zoom handled by custom .map-ctrl-group buttons
 
-// Close sheet on a simple tap/click on the map (drag and pinch-zoom do NOT trigger this)
-map.on('click', () => { if (selectedPlaceId) closeSheet(); });
+// Tap-to-close: a genuine stationary tap closes the sheet; drag and pinch do not.
+// We track touch movement ourselves because Leaflet's drag threshold (~3px) is
+// too small on mobile — a tiny finger wobble fires 'click' after a drag attempt.
+let _touchDragged = false;
+let _touchOrigin  = null;
+const _mapEl = document.getElementById('map');
+_mapEl.addEventListener('touchstart', e => {
+  _touchDragged = false;
+  _touchOrigin = e.touches.length === 1
+    ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
+}, { passive: true });
+_mapEl.addEventListener('touchmove', e => {
+  if (!_touchOrigin || e.touches.length !== 1) { _touchDragged = true; return; }
+  const d = Math.hypot(e.touches[0].clientX - _touchOrigin.x,
+                       e.touches[0].clientY - _touchOrigin.y);
+  if (d > 6) _touchDragged = true;
+}, { passive: true });
+// Leaflet fires 'click' after a tap (and sometimes after tiny drags).
+// Ignore it when the user actually moved their finger.
+map.on('click', () => {
+  const dragged = _touchDragged;
+  _touchDragged = false;
+  if (dragged) return;
+  if (selectedPlaceId) closeSheet();
+});
 
 // ─────────────────────────────────────────
 //  MARKERS  (emoji coloured pins)
@@ -1013,14 +1030,12 @@ function openSheet(id) {
   else resetDriveStyles();
 
   document.getElementById('bottom-sheet').classList.add('open');
-  document.getElementById('overlay').classList.add('visible');
 }
 
 function closeSheet() {
   selectedPlaceId = null;
   resetDriveStyles();
   document.getElementById('bottom-sheet').classList.remove('open');
-  document.getElementById('overlay').classList.remove('visible');
 }
 
 function viewInGuide(id) {
