@@ -89,12 +89,12 @@
       font-size: 13px; width: 30px !important; height: 30px !important;
     }
 
-    /* ── Bottom sheet overlay ── */
+    /* ── Bottom sheet overlay (no darkening — click-to-close only) ── */
     .sheet-overlay {
-      position: fixed; inset: 0; background: rgba(0,0,0,.28);
-      z-index: 4000; opacity: 0; pointer-events: none; transition: opacity .3s;
+      position: fixed; inset: 0; background: transparent;
+      z-index: 4000; pointer-events: none;
     }
-    .sheet-overlay.visible { opacity: 1; pointer-events: auto; }
+    .sheet-overlay.visible { pointer-events: auto; }
 
     /* ── Bottom sheet ── */
     .bottom-sheet {
@@ -871,13 +871,33 @@ PLACES.forEach(p => {
 const scenicPolylines = {};
 const driveColor = CATS['scenic-drive'].color;
 
+const DRIVE_DIM = 0.22;   // default opacity (ghost state)
+const DRIVE_FULL = 1.0;   // selected route opacity
+const DRIVE_FADE = 0.08;  // other routes while one is selected
+
 Object.entries(SCENIC_PATHS).forEach(([id, coords]) => {
   const poly = L.polyline(coords, {
-    color: driveColor, weight: 3, opacity: 0.75, interactive: false,
+    color: driveColor, weight: 2.5, opacity: DRIVE_DIM, interactive: false,
   });
   poly.addTo(map);
   scenicPolylines[id] = poly;
 });
+
+function highlightDrive(activeId) {
+  Object.entries(scenicPolylines).forEach(([id, poly]) => {
+    if (!map.hasLayer(poly)) return;
+    poly.setStyle(id === activeId
+      ? { opacity: DRIVE_FULL, weight: 4 }
+      : { opacity: DRIVE_FADE, weight: 2.5 });
+    if (id === activeId) poly.bringToFront();
+  });
+}
+
+function resetDriveStyles() {
+  Object.values(scenicPolylines).forEach(poly => {
+    poly.setStyle({ opacity: DRIVE_DIM, weight: 2.5 });
+  });
+}
 
 // ─────────────────────────────────────────
 //  FILTER CHIPS
@@ -986,12 +1006,17 @@ function openSheet(id) {
   guideBtn.onclick = () => viewInGuide(id);
   actions.appendChild(guideBtn);
 
+  // Highlight this drive's polyline; reset all others
+  if (p.category === 'scenic-drive') highlightDrive(id);
+  else resetDriveStyles();
+
   document.getElementById('bottom-sheet').classList.add('open');
   document.getElementById('overlay').classList.add('visible');
 }
 
 function closeSheet() {
   selectedPlaceId = null;
+  resetDriveStyles();
   document.getElementById('bottom-sheet').classList.remove('open');
   document.getElementById('overlay').classList.remove('visible');
 }
