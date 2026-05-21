@@ -814,8 +814,8 @@ let locationCircle = null;
 //  MAP INIT
 // ─────────────────────────────────────────
 const map = L.map('map', { center: [45.28, -72.1], zoom: 9, zoomControl: false });
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+  attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions">CARTO</a>',
   maxZoom: 19,
 }).addTo(map);
 // Zoom handled by custom .map-ctrl-group buttons
