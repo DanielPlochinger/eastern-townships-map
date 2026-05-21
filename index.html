@@ -35,8 +35,17 @@
       min-width: 0; width: 100%;
     }
     #search-input::placeholder { color: #9ca3af; opacity: 1; font-weight: 400; }
-    /* hide browser's default × on search inputs in webkit */
     #search-input::-webkit-search-cancel-button { -webkit-appearance: none; }
+    #search-clear {
+      display: none; width: 18px; height: 18px; border-radius: 50%;
+      border: none; background: #d1d5db; color: #6b7280;
+      font-size: 10px; font-weight: 700; line-height: 1;
+      cursor: pointer; flex-shrink: 0;
+      align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent; padding: 0;
+    }
+    #search-clear.visible { display: flex; }
+    #search-clear:hover { background: #9ca3af; color: white; }
     .guide-reload {
       text-align: center; padding: 20px 16px 36px;
     }
@@ -205,6 +214,7 @@
   <div class="app-title">
     <input type="search" id="search-input" placeholder="Search places, towns, notes…"
            autocomplete="off" autocorrect="off" spellcheck="false" />
+    <button id="search-clear" aria-label="Clear search" onclick="clearSearch()">✕</button>
   </div>
   <button class="tab-btn active" id="tab-map" onclick="showTab('map')">Map</button>
   <button class="tab-btn" id="tab-guide" onclick="showTab('guide')">Guide</button>
@@ -1248,8 +1258,18 @@ buildGuide();
 // Search input
 document.getElementById('search-input').addEventListener('input', function() {
   searchQuery = this.value.trim().toLowerCase();
+  document.getElementById('search-clear').classList.toggle('visible', searchQuery.length > 0);
   applyFilters();
 });
+
+function clearSearch() {
+  const inp = document.getElementById('search-input');
+  inp.value = '';
+  searchQuery = '';
+  document.getElementById('search-clear').classList.remove('visible');
+  applyFilters();
+  inp.focus();
+}
 </script>
 </body>
 </html>
