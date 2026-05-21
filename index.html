@@ -94,7 +94,6 @@
       position: fixed; inset: 0; background: transparent;
       z-index: 4000; pointer-events: none;
     }
-    .sheet-overlay.visible { pointer-events: auto; }
 
     /* ── Bottom sheet ── */
     .bottom-sheet {
@@ -208,7 +207,7 @@
 
 <div id="guide-view" class="view"></div>
 
-<div class="sheet-overlay" id="overlay" onclick="closeSheet()"></div>
+<div class="sheet-overlay" id="overlay"></div>
 
 <div class="bottom-sheet" id="bottom-sheet">
   <div class="sheet-handle"></div>
@@ -826,6 +825,9 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   maxZoom: 19,
 }).addTo(map);
 // Zoom handled by custom .map-ctrl-group buttons
+
+// Close sheet on a simple tap/click on the map (drag and pinch-zoom do NOT trigger this)
+map.on('click', () => { if (selectedPlaceId) closeSheet(); });
 
 // ─────────────────────────────────────────
 //  MARKERS  (emoji coloured pins)
