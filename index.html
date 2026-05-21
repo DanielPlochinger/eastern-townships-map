@@ -7,413 +7,175 @@
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin=""/>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-
     :root {
       --bar-h: calc(48px + env(safe-area-inset-top, 0px));
       --filter-h: 48px;
       --safe-bottom: env(safe-area-inset-bottom, 0px);
     }
-
     body {
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      height: 100dvh;
-      overflow: hidden;
-      background: #e8ede5;
+      height: 100dvh; overflow: hidden; background: #e8ede5;
     }
 
     /* ── Tab bar ── */
     .tab-bar {
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      height: var(--bar-h);
-      padding-top: env(safe-area-inset-top, 0px);
-      background: white;
-      border-bottom: 1px solid #e5e7eb;
-      display: flex;
-      align-items: stretch;
-      z-index: 3000;
+      position: fixed; top: 0; left: 0; right: 0;
+      height: var(--bar-h); padding-top: env(safe-area-inset-top, 0px);
+      background: white; border-bottom: 1px solid #e5e7eb;
+      display: flex; align-items: stretch; z-index: 3000;
     }
-
     .app-title {
-      flex: 1;
-      display: flex;
-      align-items: center;
-      padding: 0 16px;
-      font-size: 15px;
-      font-weight: 700;
-      color: #1a5e3b;
-      gap: 6px;
+      flex: 1; display: flex; align-items: center;
+      padding: 0 16px; font-size: 15px; font-weight: 700; color: #1a5e3b; gap: 6px;
     }
-
     .tab-btn {
-      padding: 0 18px;
-      border: none;
-      background: transparent;
-      font-size: 14px;
-      font-weight: 600;
-      color: #9ca3af;
-      cursor: pointer;
-      border-bottom: 3px solid transparent;
-      transition: color 0.15s, border-color 0.15s;
+      padding: 0 18px; border: none; background: transparent;
+      font-size: 14px; font-weight: 600; color: #9ca3af; cursor: pointer;
+      border-bottom: 3px solid transparent; transition: color .15s, border-color .15s;
       -webkit-tap-highlight-color: transparent;
     }
-
     .tab-btn.active { color: #1a5e3b; border-bottom-color: #1a5e3b; }
 
-    /* ── Views ── */
-    .view {
-      position: fixed;
-      top: var(--bar-h);
-      left: 0; right: 0; bottom: 0;
-      display: none;
-    }
-    .view.active { display: block; }
-
-    /* ── Filter bar ── */
+    /* ── Global filter bar (sits below tab bar, above both views) ── */
     .filter-bar {
-      position: absolute;
-      top: 0; left: 0; right: 0;
-      height: var(--filter-h);
-      z-index: 1000;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      padding: 0 12px;
-      overflow-x: auto;
-      background: rgba(255,255,255,0.96);
+      position: fixed; top: var(--bar-h); left: 0; right: 0;
+      height: var(--filter-h); z-index: 2900;
+      display: flex; align-items: center; gap: 7px; padding: 0 12px;
+      overflow-x: auto; background: rgba(255,255,255,0.97);
       border-bottom: 1px solid rgba(0,0,0,0.08);
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
+      -webkit-overflow-scrolling: touch; scrollbar-width: none;
     }
     .filter-bar::-webkit-scrollbar { display: none; }
-
     .filter-chip {
-      flex-shrink: 0;
-      padding: 5px 12px;
-      border-radius: 20px;
-      border: 1.5px solid #d1d5db;
-      background: white;
-      font-size: 12.5px;
-      font-weight: 500;
-      color: #374151;
-      cursor: pointer;
-      white-space: nowrap;
-      transition: all 0.15s;
+      flex-shrink: 0; padding: 5px 12px; border-radius: 20px;
+      border: 1.5px solid #d1d5db; background: white;
+      font-size: 12.5px; font-weight: 500; color: #374151;
+      cursor: pointer; white-space: nowrap; transition: all .15s;
       -webkit-tap-highlight-color: transparent;
     }
     .filter-chip.active { color: white; border-color: transparent; }
 
-    /* ── Map ── */
-    #map {
-      position: absolute;
-      top: var(--filter-h);
-      left: 0; right: 0; bottom: 0;
+    /* ── Views (below tab bar + filter bar) ── */
+    .view {
+      position: fixed;
+      top: calc(var(--bar-h) + var(--filter-h));
+      left: 0; right: 0; bottom: 0; display: none;
     }
+    .view.active { display: block; }
+
+    /* ── Map fills entire map-view ── */
+    #map { position: absolute; inset: 0; }
 
     /* ── Locate button ── */
     .locate-btn {
-      position: absolute;
-      bottom: calc(16px + var(--safe-bottom));
-      right: 12px;
-      z-index: 1000;
-      width: 40px; height: 40px;
-      border-radius: 8px;
-      border: none;
-      background: white;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.22);
-      cursor: pointer;
-      font-size: 18px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      -webkit-tap-highlight-color: transparent;
+      position: absolute; bottom: calc(16px + var(--safe-bottom)); right: 12px;
+      z-index: 1000; width: 40px; height: 40px; border-radius: 8px;
+      border: none; background: white; box-shadow: 0 2px 8px rgba(0,0,0,.22);
+      cursor: pointer; font-size: 18px; display: flex; align-items: center;
+      justify-content: center; -webkit-tap-highlight-color: transparent;
     }
-
-    /* ── Leaflet zoom control ── */
     .leaflet-bottom.leaflet-right {
-      bottom: calc(64px + var(--safe-bottom));
-      right: 12px;
-    }
-    .leaflet-control-zoom a {
-      font-size: 18px !important;
-      line-height: 30px !important;
+      bottom: calc(64px + var(--safe-bottom)); right: 12px;
     }
 
     /* ── Custom marker ── */
     .cat-marker {
-      border-radius: 50%;
-      display: flex !important;
-      align-items: center;
-      justify-content: center;
-      border: 2.5px solid white;
-      box-shadow: 0 2px 7px rgba(0,0,0,0.35);
-      cursor: pointer;
-      font-size: 13px;
-      width: 30px !important;
-      height: 30px !important;
+      border-radius: 50%; display: flex !important; align-items: center;
+      justify-content: center; border: 2.5px solid white;
+      box-shadow: 0 2px 7px rgba(0,0,0,.35); cursor: pointer;
+      font-size: 13px; width: 30px !important; height: 30px !important;
     }
 
     /* ── Bottom sheet overlay ── */
     .sheet-overlay {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.28);
-      z-index: 4000;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.3s;
+      position: fixed; inset: 0; background: rgba(0,0,0,.28);
+      z-index: 4000; opacity: 0; pointer-events: none; transition: opacity .3s;
     }
     .sheet-overlay.visible { opacity: 1; pointer-events: auto; }
 
     /* ── Bottom sheet ── */
     .bottom-sheet {
-      position: fixed;
-      left: 0; right: 0; bottom: 0;
-      max-height: 62vh;
-      background: white;
-      border-radius: 18px 18px 0 0;
-      z-index: 5000;
-      transform: translateY(100%);
-      transition: transform 0.3s cubic-bezier(0.32,0.72,0,1);
-      display: flex;
-      flex-direction: column;
-      box-shadow: 0 -4px 24px rgba(0,0,0,0.14);
-      padding-bottom: var(--safe-bottom);
+      position: fixed; left: 0; right: 0; bottom: 0; max-height: 62vh;
+      background: white; border-radius: 18px 18px 0 0; z-index: 5000;
+      transform: translateY(100%); transition: transform .3s cubic-bezier(.32,.72,0,1);
+      display: flex; flex-direction: column;
+      box-shadow: 0 -4px 24px rgba(0,0,0,.14); padding-bottom: var(--safe-bottom);
     }
     .bottom-sheet.open { transform: translateY(0); }
-
     .sheet-handle {
-      width: 36px; height: 4px;
-      background: #d1d5db;
-      border-radius: 2px;
-      margin: 10px auto 0;
-      flex-shrink: 0;
+      width: 36px; height: 4px; background: #d1d5db;
+      border-radius: 2px; margin: 10px auto 0; flex-shrink: 0;
     }
-
     .sheet-header {
-      display: flex;
-      align-items: flex-start;
-      padding: 10px 16px 8px;
-      gap: 10px;
-      flex-shrink: 0;
+      display: flex; align-items: flex-start;
+      padding: 10px 16px 8px; gap: 10px; flex-shrink: 0;
     }
-
     .sheet-cat-dot {
-      width: 11px; height: 11px;
-      border-radius: 50%;
-      margin-top: 5px;
-      flex-shrink: 0;
+      width: 11px; height: 11px; border-radius: 50%; margin-top: 5px; flex-shrink: 0;
     }
-
     .sheet-title-block { flex: 1; min-width: 0; }
-
-    .sheet-name {
-      font-size: 17px;
-      font-weight: 700;
-      color: #111827;
-      line-height: 1.3;
-    }
-
-    .sheet-meta {
-      font-size: 12.5px;
-      color: #6b7280;
-      margin-top: 2px;
-    }
-
+    .sheet-name { font-size: 17px; font-weight: 700; color: #111827; line-height: 1.3; }
+    .sheet-meta { font-size: 12.5px; color: #6b7280; margin-top: 2px; }
     .sheet-close {
-      width: 30px; height: 30px;
-      border-radius: 50%;
-      border: none;
-      background: #f3f4f6;
-      cursor: pointer;
-      font-size: 14px;
-      flex-shrink: 0;
+      width: 30px; height: 30px; border-radius: 50%; border: none;
+      background: #f3f4f6; cursor: pointer; font-size: 14px; flex-shrink: 0;
       -webkit-tap-highlight-color: transparent;
     }
-
-    .sheet-body {
-      padding: 2px 16px 10px;
-      overflow-y: auto;
-      flex: 1;
-    }
-
-    .sheet-description {
-      font-size: 14px;
-      line-height: 1.65;
-      color: #374151;
-    }
-
-    .sheet-rating {
-      margin-top: 6px;
-      font-size: 12px;
-      color: #9ca3af;
-    }
-
+    .sheet-body { padding: 2px 16px 10px; overflow-y: auto; flex: 1; }
+    .sheet-description { font-size: 14px; line-height: 1.65; color: #374151; }
+    .sheet-rating { margin-top: 6px; font-size: 12px; color: #9ca3af; }
     .sheet-actions {
-      display: flex;
-      gap: 8px;
-      padding: 10px 16px 12px;
-      border-top: 1px solid #f3f4f6;
-      flex-shrink: 0;
+      display: flex; gap: 8px; padding: 10px 16px 12px;
+      border-top: 1px solid #f3f4f6; flex-shrink: 0;
     }
-
     .sheet-btn {
-      flex: 1;
-      padding: 9px 8px;
-      border-radius: 9px;
-      border: 1.5px solid #d1d5db;
-      background: white;
-      font-size: 13px;
-      font-weight: 500;
-      color: #374151;
-      cursor: pointer;
-      text-align: center;
-      text-decoration: none;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 4px;
+      flex: 1; padding: 9px 8px; border-radius: 9px;
+      border: 1.5px solid #d1d5db; background: white;
+      font-size: 13px; font-weight: 500; color: #374151; cursor: pointer;
+      text-align: center; text-decoration: none;
+      display: flex; align-items: center; justify-content: center; gap: 4px;
       -webkit-tap-highlight-color: transparent;
-    }
-
-    .sheet-btn.primary {
-      background: #1a5e3b;
-      border-color: #1a5e3b;
-      color: white;
     }
 
     /* ── Guide view ── */
     #guide-view {
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      background: #f9fafb;
-      padding-bottom: var(--safe-bottom);
+      overflow-y: auto; -webkit-overflow-scrolling: touch;
+      background: #f9fafb; padding-bottom: var(--safe-bottom);
     }
-
-    .guide-intro {
-      padding: 14px 16px;
-      background: #1a5e3b;
-      color: white;
-      font-size: 13px;
-      line-height: 1.55;
+    .guide-empty {
+      padding: 48px 24px; text-align: center; color: #9ca3af; font-size: 14px;
     }
-
     .guide-section { margin-bottom: 2px; }
-
     .guide-section-header {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 14px 16px 10px;
-      background: white;
-      border-bottom: 1px solid #f3f4f6;
-      position: sticky;
-      top: 0;
-      z-index: 10;
+      display: flex; align-items: center; gap: 8px;
+      padding: 14px 16px 10px; background: white;
+      border-bottom: 1px solid #f3f4f6; position: sticky; top: 0; z-index: 10;
     }
-
-    .guide-section-swatch {
-      width: 12px; height: 12px;
-      border-radius: 3px;
-      flex-shrink: 0;
-    }
-
-    .guide-section-label {
-      font-size: 15px;
-      font-weight: 700;
-      color: #111827;
-      flex: 1;
-    }
-
-    .guide-section-count {
-      font-size: 12px;
-      color: #9ca3af;
-      font-weight: 500;
-    }
-
-    .guide-entry {
-      background: white;
-      padding: 12px 16px;
-      border-bottom: 1px solid #f3f4f6;
-    }
-
+    .guide-section-swatch { width: 12px; height: 12px; border-radius: 3px; flex-shrink: 0; }
+    .guide-section-label { font-size: 15px; font-weight: 700; color: #111827; flex: 1; }
+    .guide-section-count { font-size: 12px; color: #9ca3af; font-weight: 500; }
+    .guide-entry { background: white; padding: 12px 16px; border-bottom: 1px solid #f3f4f6; }
     .guide-entry-top {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 8px;
+      display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
     }
-
-    .guide-entry-name {
-      font-size: 14.5px;
-      font-weight: 600;
-      color: #111827;
-      flex: 1;
-    }
-
-    .guide-entry-town {
-      font-size: 11.5px;
-      color: #6b7280;
-      margin-top: 2px;
-    }
-
+    .guide-entry-name { font-size: 14.5px; font-weight: 600; color: #111827; flex: 1; }
+    .guide-entry-town { font-size: 11.5px; color: #6b7280; margin-top: 2px; }
     .guide-map-btn {
-      flex-shrink: 0;
-      padding: 4px 10px;
-      border-radius: 6px;
-      border: 1.5px solid #d1d5db;
-      background: white;
-      font-size: 12px;
-      color: #1a5e3b;
-      cursor: pointer;
-      font-weight: 600;
+      flex-shrink: 0; padding: 4px 10px; border-radius: 6px;
+      border: 1.5px solid #d1d5db; background: white;
+      font-size: 12px; color: #1a5e3b; cursor: pointer; font-weight: 600;
       -webkit-tap-highlight-color: transparent;
     }
-
-    .guide-entry-desc {
-      font-size: 13px;
-      line-height: 1.55;
-      color: #4b5563;
-      margin-top: 7px;
-    }
-
-    .guide-entry-links {
-      display: flex;
-      gap: 12px;
-      margin-top: 8px;
-      flex-wrap: wrap;
-    }
-
-    .guide-link {
-      font-size: 12px;
-      color: #1a5e3b;
-      text-decoration: none;
-      font-weight: 500;
-    }
-
-    .guide-entry-rating {
-      font-size: 11.5px;
-      color: #9ca3af;
-      margin-top: 5px;
-    }
-
-    .guide-static-section {
-      background: white;
-      margin-top: 2px;
-    }
-
+    .guide-entry-desc { font-size: 13px; line-height: 1.55; color: #4b5563; margin-top: 7px; }
+    .guide-entry-links { display: flex; gap: 12px; margin-top: 8px; flex-wrap: wrap; }
+    .guide-link { font-size: 12px; color: #1a5e3b; text-decoration: none; font-weight: 500; }
+    .guide-entry-rating { font-size: 11.5px; color: #9ca3af; margin-top: 5px; }
+    .guide-static-section { background: white; margin-top: 2px; }
     .guide-static-body {
-      padding: 12px 16px;
-      font-size: 13.5px;
-      line-height: 1.65;
-      color: #374151;
+      padding: 12px 16px; font-size: 13.5px; line-height: 1.65; color: #374151;
     }
+    .guide-static-body li { margin: 6px 0 6px 16px; }
 
-    .guide-static-body li {
-      margin: 6px 0 6px 16px;
-    }
-
-    /* highlight flash for guide → map navigation */
     @keyframes flash-entry {
       0%, 100% { background: white; }
       30% { background: #d1fae5; }
@@ -424,18 +186,17 @@
 <body>
 
 <div class="tab-bar">
-  <div class="app-title">
-    <span>🗺</span>
-    <span>Eastern Townships</span>
-  </div>
+  <div class="app-title"><span>🗺</span><span>Eastern Townships</span></div>
   <button class="tab-btn active" id="tab-map" onclick="showTab('map')">Map</button>
   <button class="tab-btn" id="tab-guide" onclick="showTab('guide')">Guide</button>
 </div>
 
+<!-- Global filter bar — persists across both tabs -->
+<div class="filter-bar" id="filter-bar"></div>
+
 <div id="map-view" class="view active">
-  <div class="filter-bar" id="filter-bar"></div>
   <div id="map"></div>
-  <button class="locate-btn" onclick="locateUser()" title="My location">📍</button>
+  <button class="locate-btn" onclick="locateUser()">📍</button>
 </div>
 
 <div id="guide-view" class="view"></div>
@@ -462,400 +223,545 @@
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin=""></script>
 <script>
 // ─────────────────────────────────────────
-//  CATEGORY DEFINITIONS
+//  CATEGORIES  (v2 colour palette)
 // ─────────────────────────────────────────
 const CATS = {
-  'brewery':      { label: 'Breweries',      emoji: '🍺', color: '#D97706' },
-  'vineyard':     { label: 'Vineyards',       emoji: '🍷', color: '#7C3AED' },
-  'bike-loop':    { label: 'Bike Loops',      emoji: '🚴', color: '#16A34A' },
-  'village':      { label: 'Villages',        emoji: '🏘️', color: '#DC2626' },
-  'scenic-drive': { label: 'Scenic Drives',   emoji: '🚗', color: '#2563EB' },
-  'lake':         { label: 'Lakes & Beaches', emoji: '🏖️', color: '#0891B2' },
-  'cafe':         { label: 'Cafés',           emoji: '☕', color: '#92400E' },
-  'farm-table':   { label: 'Farm-to-Table',   emoji: '🌿', color: '#059669' },
+  'brewery':      { label: 'Breweries',      emoji: '🍺', color: '#B45309' },
+  'vineyard':     { label: 'Vineyards',       emoji: '🍷', color: '#6D28D9' },
+  'bike-loop':    { label: 'Bike Loops',      emoji: '🚴', color: '#1D4ED8' },
+  'village':      { label: 'Villages',        emoji: '🏘️', color: '#BE123C' },
+  'scenic-drive': { label: 'Scenic Drives',   emoji: '🚗', color: '#0F766E' },
+  'lake':         { label: 'Lakes & Beaches', emoji: '🏖️', color: '#0369A1' },
+  'cafe':         { label: 'Cafés',           emoji: '☕', color: '#A16207' },
+  'farm-table':   { label: 'Farm-to-Table',   emoji: '🌿', color: '#166534' },
 };
 
 // ─────────────────────────────────────────
-//  PLACES DATA
+//  PLACES DATA  (all 82 entries, full Maps URLs)
 // ─────────────────────────────────────────
 const PLACES = [
-  // ── BREWERIES ──
-  { id:'b1', name:'Brasserie Dunham', town:'Dunham', category:'brewery', lat:45.1304167, lng:-72.8001991,
+
+  // ── BREWERIES ──────────────────────────
+  { id:'b1', name:'Brasserie Dunham', town:'Dunham', category:'brewery',
+    lat:45.1304167, lng:-72.8001991,
     description:'Small craft brewery known for IPAs such as Cyclope IPA, Saison du Pinacle and Viti Vini Vici. Nearby stops include L\'Épicerie-Café Dunham and the Gagliano vineyard.',
-    mapsUrl:'https://www.google.com/maps/place/Brasserie+Dunham+%2F+Pub+%26+Boutique/@45.1304167,-72.8001991,17z' },
+    mapsUrl:'https://www.google.com/maps/place/Brasserie+Dunham+%2F+Pub+%26+Boutique/@45.1304167,-72.8001991,17z/data=!4m6!3m5!1s0x4cc9e6825e3c50f5:0x385ecec110237d53!8m2!3d45.1304167!4d-72.8001991!16s%2Fg%2F1hc508kbq' },
 
-  { id:'b2', name:'L\'Autre Brasserie', town:'Bedford', category:'brewery', lat:45.1191737, lng:-72.9797882,
-    description:'Microbrewery at 110 rue de la Rivière with beers like P\'tite Grisette and La Blonde de l\'Autre. Nearby: Comptoir Moutarde delicatessen, Fromagerie Missiska, Vignoble L\'Ardennais and the Beat & Betterave nanobrasserie.',
-    mapsUrl:'https://www.google.com/maps/place/L\'Autre+Brasserie/@45.1191737,-72.9797882,17z' },
+  { id:'b2', name:'L\'Autre Brasserie', town:'Bedford', category:'brewery',
+    lat:45.1191737, lng:-72.9797882,
+    description:'Microbrewery at 110 rue de la Rivière with beers like P\'tite Grisette and La Blonde de l\'Autre. Nearby: Comptoir Moutarde delicatessen, Fromagerie Missiska, Vignoble L\'Ardennais and Beat & Betterave.',
+    mapsUrl:'https://www.google.com/maps/place/L\'Autre+Brasserie/@45.1191737,-72.9797882,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9ed6dbec9970d:0x53f002618702d145!8m2!3d45.1191737!4d-72.9797882!16s%2Fg%2F11sxydgwsr' },
 
-  { id:'b3', name:'Farnham Ale & Lager', town:'Farnham', category:'brewery', lat:45.2848506, lng:-72.9888541,
-    description:'Brewpub producing a range of lagers and ales — 27 Lager blonde, 35 Red English and 12 German wheat. Close to Fromagerie des Cantons, Vignoble de la Bauge and the Montérégiade cycle path.',
-    mapsUrl:'https://www.google.com/maps/place/Farnham+Ale+%26+Lager/@45.2848506,-72.9888541,17z' },
+  { id:'b3', name:'Farnham Ale & Lager', town:'Farnham', category:'brewery',
+    lat:45.2848506, lng:-72.9888541,
+    description:'Brewpub producing lagers and ales — 27 Lager blonde, 35 Red English and 12 German wheat. Close to Fromagerie des Cantons, Vignoble de la Bauge and the Montérégiade cycle path.',
+    mapsUrl:'https://www.google.com/maps/place/Farnham+Ale+%26+Lager/@45.2848506,-72.9888541,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9bf7d217fc2fb:0xaa01b4b9852d8399!8m2!3d45.2848506!4d-72.9888541!16s%2Fg%2F1q63cjnfy' },
 
-  { id:'b4', name:'Beat & Betterave', town:'Frelighsburg', category:'brewery', lat:45.0536045, lng:-72.8386602,
-    description:'Nanobrasserie and café hosting concerts, with beers like the rye-flavoured Agent 00 and the stout Matière Sombre. Dog-friendly and accessible. Close to Boulangerie La Mie Bretonne and Domaine du P\'tit Bonheur vineyard.',
-    mapsUrl:'https://www.google.com/maps/place/Beat+%26+Betterave+-+Nanobrasserie+%26+Caf%C3%A9/@45.0536045,-72.8386602,17z' },
+  { id:'b4', name:'Beat & Betterave', town:'Frelighsburg', category:'brewery',
+    lat:45.0536045, lng:-72.8386602,
+    description:'Nanobrasserie and café hosting concerts. Beers include the rye-flavoured Agent 00 and the stout Matière Sombre. Dog-friendly. Near Boulangerie La Mie Bretonne and Domaine du P\'tit Bonheur vineyard.',
+    mapsUrl:'https://www.google.com/maps/place/Beat+%26+Betterave+-+Nanobrasserie+%26+Caf%C3%A9/@45.0536045,-72.8386602,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9fb33e460fc5d:0x3f63291da553acad!8m2!3d45.0536045!4d-72.8386602!16s%2Fg%2F11bv1c9tjt' },
 
-  { id:'b5', name:'Le Sage Brasseur', town:'Cowansville', category:'brewery', lat:45.1991364, lng:-72.7492041,
+  { id:'b5', name:'Le Sage Brasseur', town:'Cowansville', category:'brewery',
+    lat:45.1991364, lng:-72.7492041,
     description:'Artisanal brewery known for raspberry-honey beer and maple red ale. Near Musée du chocolat de la Confiserie Bromont and Domaine ValBrome vineyard.',
-    mapsUrl:'https://www.google.com/maps/place/Le+Sage+Brasseur+-+Microbrasserie+Artisanale/@45.1991364,-72.7492041,17z' },
+    mapsUrl:'https://www.google.com/maps/place/Le+Sage+Brasseur+-+Microbrasserie+Artisanale/@45.1991364,-72.7492041,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9dd2c6b3d2149:0x207b7eaf772a55f5!8m2!3d45.1991364!4d-72.7492041!16s%2Fg%2F11j58wzqmn' },
 
-  { id:'b6', name:'Micro-brasserie le Brouemont', town:'Bromont', category:'brewery', lat:45.3157143, lng:-72.642442,
-    description:'Produces Golden Ale, stout and the Feu de joie NEIPA. Visitors can combine with nearby Vignoble Bromont and Léon Courville vineyards.',
-    mapsUrl:'https://www.google.com/maps/place/Brouemont+-+Microbrasserie+%26+Restaurant/@45.3157143,-72.642442,17z' },
+  { id:'b6', name:'Micro-brasserie le Brouemont', town:'Bromont', category:'brewery',
+    lat:45.3157143, lng:-72.642442,
+    description:'Produces Golden Ale, stout and the Feu de joie NEIPA. Combine a visit with nearby Vignoble Bromont and Léon Courville vineyards.',
+    mapsUrl:'https://www.google.com/maps/place/Brouemont+-+Microbrasserie+%26+Restaurant/@45.3157143,-72.642442,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9da203c9ce843:0x20726a7fd78241a1!8m2!3d45.3157143!4d-72.642442!16s%2Fg%2F1tvw4k6l' },
 
-  { id:'b7', name:'Microbrasserie Coaticook', town:'Coaticook', category:'brewery', lat:45.156984, lng:-71.8003513,
+  { id:'b7', name:'Microbrasserie Coaticook', town:'Coaticook', category:'brewery',
+    lat:45.156984, lng:-71.8003513,
     description:'Craft brewery with a restaurant and terrace. Authentic, balanced beers ideal after outdoor activities.',
-    mapsUrl:'https://www.google.com/maps/place/Microbrasserie+Coaticook/@45.156984,-71.8003513,17z' },
+    mapsUrl:'https://www.google.com/maps/place/Microbrasserie+Coaticook/@45.156984,-71.8003513,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb658f0b9150433:0x4d606e4e58b4ea57!8m2!3d45.156984!4d-71.8003513!16s%2Fg%2F1ydntyzx9' },
 
-  { id:'b8', name:'Hop Station', town:'Coaticook', category:'brewery', lat:45.1311276, lng:-71.8086811,
+  { id:'b8', name:'Hop Station', town:'Coaticook', category:'brewery',
+    lat:45.1311276, lng:-71.8086811,
     description:'Dynamic microbrewery in the town\'s historic old train station. Original beers, large cocktail menu, and a Mexican-inspired kitchen using fresh house-made products.',
-    mapsUrl:'https://www.google.com/maps/place/Hop+Station+-+Microbrasserie/@45.1311276,-71.8086811,17z' },
+    mapsUrl:'https://www.google.com/maps/place/Hop+Station+-+Microbrasserie/@45.1311276,-71.8086811,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb659e011f90a65:0xf102f19a5be4e5dc!8m2!3d45.1311276!4d-71.8086811!16s%2Fg%2F11hdsf_jd_' },
 
-  { id:'b9', name:'Siboire Jacques-Cartier', town:'Sherbrooke', category:'brewery', lat:45.3979548, lng:-71.918378,
-    description:'Microbrewery and restaurant overlooking Lac-des-Nations. Guests can enjoy lunch or dinner and fill beer jugs to take home.',
-    mapsUrl:'https://www.google.com/maps/place/Siboire+Jacques-Cartier/@45.3979548,-71.918378,17z' },
+  { id:'b9', name:'Siboire Jacques-Cartier', town:'Sherbrooke', category:'brewery',
+    lat:45.3979548, lng:-71.918378,
+    description:'Microbrewery and restaurant overlooking Lac-des-Nations. Enjoy lunch or dinner and fill beer jugs to take home.',
+    mapsUrl:'https://www.google.com/maps/place/Siboire+Jacques-Cartier/@45.3979548,-71.918378,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7b3688362779f:0xe2cc4c97a3b6f865!8m2!3d45.3979548!4d-71.918378!16s%2Fg%2F11b5zv739z' },
 
-  { id:'b10', name:'La Mare au Diable', town:'Sherbrooke', category:'brewery', lat:45.4008933, lng:-71.891652,
+  { id:'b10', name:'La Mare au Diable', town:'Sherbrooke', category:'brewery',
+    lat:45.4008933, lng:-71.891652,
     description:'Sherbrooke\'s oldest microbrewery with a warm interior and large terrace. Serves its own beers and boasts one of Québec\'s largest whisky selections.',
-    mapsUrl:'https://www.google.com/maps/place/La+Mare+au+Diable+-+Microbrasserie/@45.4008933,-71.891652,17z' },
+    mapsUrl:'https://www.google.com/maps/place/La+Mare+au+Diable+-+Microbrasserie/@45.4008933,-71.891652,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7b30fdcb95179:0xf15161f3f25b421a!8m2!3d45.4008933!4d-71.891652!16s%2Fg%2F1td5ws0r' },
 
-  { id:'b11', name:'Microbrasserie de la Cie Vilandré', town:'North Hatley', category:'brewery', lat:45.2764675, lng:-71.9726697,
+  { id:'b11', name:'Microbrasserie de la Cie Vilandré', town:'North Hatley', category:'brewery',
+    lat:45.2764675, lng:-71.9726697,
     description:'20 beers on tap from a terrace overlooking the Massawippi River.',
-    mapsUrl:'https://www.google.com/maps/place/Microbrasserie+de+La+Cie+Vilandr%C3%A9/@45.2764675,-71.9726697,17z' },
+    mapsUrl:'https://www.google.com/maps/place/Microbrasserie+de+La+Cie+Vilandr%C3%A9/@45.2774337,-71.9757943,17z/data=!4m10!1m2!2m1!1sMicrobrasserie+de+la+Cie+Vilandr%C3%A9!3m6!1s0x4cb64f71780bb5fd:0xb9d0ae5c606e2ae8!8m2!3d45.2764675!4d-71.9726697!16s%2Fg%2F11x768rc5d' },
 
-  { id:'b12', name:'Microbrasserie Équinoxe', town:'Mansonville', category:'brewery', lat:45.0513812, lng:-72.3918726,
+  { id:'b12', name:'Microbrasserie Équinoxe', town:'Mansonville', category:'brewery',
+    lat:45.0513812, lng:-72.3918726,
     description:'New microbrewery (2022) with pub meals during the day and Italian dinners at night. Beers brewed on site, complemented by guest beers, wine and cocktails.',
-    mapsUrl:'https://www.google.com/maps/place/%C3%89quinoxe+-+Microbrasserie+%2F+Resto+%26+BrouePub/@45.0513812,-72.3918726,17z' },
+    mapsUrl:'https://www.google.com/maps/place/%C3%89quinoxe+-+Microbrasserie+%2F+Resto+%26+BrouePub/@45.0513812,-72.3918726,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb611079d751a81:0x1f6ad8d569151ca5!8m2!3d45.0513812!4d-72.3918726!16s%2Fg%2F11syq37t1_' },
 
-  { id:'b13', name:'La Confrérie Artisans Brasseurs', town:'Windsor', category:'brewery', lat:45.5628054, lng:-72.0191402,
+  { id:'b13', name:'La Confrérie Artisans Brasseurs', town:'Windsor', category:'brewery',
+    lat:45.5628054, lng:-72.0191402,
     description:'Family-run microbrewery specialising in fruity beers made with local ingredients. Tasting room overlooking the brewhouse, large dog- and kid-friendly terrace.',
-    mapsUrl:'https://www.google.com/maps/place/La+Confr%C3%A9rie+Artisans+Brasseurs/@45.5628054,-72.0191402,17z' },
+    mapsUrl:'https://www.google.com/maps/place/La+Confr%C3%A9rie+Artisans+Brasseurs/@45.5628054,-72.0191402,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7c78dd6026b15:0x32ca6e7561d2f739!8m2!3d45.5628054!4d-72.0191402!16s%2Fg%2F11j4_2thtr' },
 
-  { id:'b14', name:'L\'Ardoise, coopérative brassicole', town:'Richmond', category:'brewery', lat:45.6623066, lng:-72.1437504,
+  { id:'b14', name:'L\'Ardoise, coopérative brassicole', town:'Richmond', category:'brewery',
+    lat:45.6623066, lng:-72.1437504,
     description:'Cooperative microbrewery (opened 2021) offering a variety of beers and snacks in a relaxed atmosphere.',
-    mapsUrl:'https://www.google.com/maps/place/L\'Ardoise+-+Coop%C3%A9rative+Brassicole/@45.6623066,-72.1437504,17z' },
+    mapsUrl:'https://www.google.com/maps/place/L\'Ardoise+-+Coop%C3%A9rative+Brassicole/@45.6623066,-72.1437504,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7dd0bfbbfd629:0x7394c5bef66112cd!8m2!3d45.6623066!4d-72.1437504!16s%2Fg%2F11p5rg572l' },
 
-  // ── VINEYARDS ──
-  { id:'v1', name:'Domaine du Ridge', town:'Saint-Armand', category:'vineyard', lat:45.0727262, lng:-72.9349215,
-    description:'Key stop on the wine route. Epicurean package introduces Quebec viticulture and finishes with local product tastings.',
-    mapsUrl:'https://www.google.com/maps/place/Domaine+du+Ridge/@45.0727262,-72.9349215,17z' },
+  // ── VINEYARDS ──────────────────────────
+  { id:'v1', name:'Domaine du Ridge', town:'Saint-Armand', category:'vineyard',
+    lat:45.0727262, lng:-72.9349215,
+    description:'Key stop on the wine route. The Epicurean package introduces Quebec viticulture and finishes with local product tastings.',
+    mapsUrl:'https://www.google.com/maps/place/Domaine+du+Ridge/@45.0727262,-72.9349215,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9f026cd089ae5:0x7958a4b9cac62402!8m2!3d45.0727262!4d-72.9349215!16s%2Fg%2F1v44q0pk' },
 
-  { id:'v2', name:'Château Ste-Agnès', town:'Sutton', category:'vineyard', lat:45.0236244, lng:-72.5832901,
-    description:'Historic estate with ~7,000 vines on stone-walled terraces. Breathtaking Appalachian views. White, rosé, orange, late-harvest and fortified wines.',
-    mapsUrl:'https://www.google.com/maps/place/Ch%C3%A2teau+Ste-Agn%C3%A8s/@45.0236244,-72.5832901,17z' },
+  { id:'v2', name:'Château Ste-Agnès', town:'Sutton', category:'vineyard',
+    lat:45.0236244, lng:-72.5832901,
+    description:'Historic estate with ~7,000 vines planted on stone-walled terraces. Breathtaking Appalachian views. White, rosé, orange, late-harvest and fortified wines.',
+    mapsUrl:'https://www.google.com/maps/place/Ch%C3%A2teau+Ste-Agn%C3%A8s/@45.0236244,-72.5832901,17z/data=!4m9!3m8!1s0x4cb61b49927954e9:0x1a83fa089e9843da!5m2!4m1!1i2!8m2!3d45.0236244!4d-72.5832901!16s%2Fg%2F1tywxkbr' },
 
-  { id:'v3', name:'Val Caudalies', town:'Dunham', category:'vineyard', lat:45.0813522, lng:-72.8185685,
-    description:'Award-winning wines, vermouth and cider. Panoramic views from a covered terrace. Visitors can wander orchards, picnic and pick grapes or apples.',
-    mapsUrl:'https://www.google.com/maps/place/Val+Caudalies+-+Vignoble+%26+Cidrerie/@45.0813522,-72.8185685,17z' },
+  { id:'v3', name:'Val Caudalies', town:'Dunham', category:'vineyard',
+    lat:45.0813522, lng:-72.8185685,
+    description:'Award-winning wines, vermouth and cider. Panoramic views from a covered terrace. Wander orchards, picnic and pick grapes or apples.',
+    mapsUrl:'https://www.google.com/maps/place/Val+Caudalies+-+Vignoble+%26+Cidrerie/@45.0813522,-72.8185685,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9e4ec4b94eed3:0x9de9692ac2c03dfd!8m2!3d45.0813522!4d-72.8185685!16s%2Fg%2F11b6dwpr6v' },
 
-  { id:'v4', name:'Le Vignoble du Ruisseau', town:'Dunham', category:'vineyard', lat:45.0992042, lng:-72.7114177,
-    description:'Vineyard, distillery, cider mill and maple grove aiming for self-sufficiency. Covered bridge, vaulted barrel cellar, two-level winery, outdoor tasting areas, cocktail bar and a bistro overlooking the creek.',
-    mapsUrl:'https://www.google.com/maps/place/Le+Vignoble+du+Ruisseau+-+Winery+%26+Cidery/@45.0992042,-72.7114177,17z' },
+  { id:'v4', name:'Le Vignoble du Ruisseau', town:'Dunham', category:'vineyard',
+    lat:45.0992042, lng:-72.7114177,
+    description:'Vineyard, distillery, cider mill and maple grove aiming for self-sufficiency. Covered bridge, vaulted barrel cellar, outdoor tasting areas, cocktail bar and a bistro overlooking the creek.',
+    mapsUrl:'https://www.google.com/maps/place/Le+Vignoble+du+Ruisseau+-+Winery+%26+Cidery/@45.0992042,-72.7114177,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9e237594575ad:0xa287cf2a6a039dfa!8m2!3d45.0992042!4d-72.7114177!16s%2Fg%2F11c1nghb3q' },
 
-  { id:'v5', name:'Vignoble Gagliano', town:'Dunham', category:'vineyard', lat:45.1098014, lng:-72.8562105,
+  { id:'v5', name:'Vignoble Gagliano', town:'Dunham', category:'vineyard',
+    lat:45.1098014, lng:-72.8562105,
     description:'Family-run vineyard on the wine route where visitors can pair Italian-inspired pizzas with wines. Near Brasserie Dunham.',
-    mapsUrl:'https://www.google.com/maps/place/Vignoble+Gagliano/@45.1098014,-72.8562105,17z' },
+    mapsUrl:'https://www.google.com/maps/place/Vignoble+Gagliano/@45.1098014,-72.8562105,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9e5974ef25797:0x15fc389cecc27adb!8m2!3d45.1098014!4d-72.8562105!16s%2Fg%2F1pp2vj6fb' },
 
-  { id:'v6', name:'Vignoble de l\'Orpailleur', town:'Dunham', category:'vineyard', lat:45.1095737, lng:-72.8590423,
+  { id:'v6', name:'Vignoble de l\'Orpailleur', town:'Dunham', category:'vineyard',
+    lat:45.1095737, lng:-72.8590423,
     description:'Pioneering vineyard (planted 1982) noted for sparkling wines made using the traditional Champenoise method.',
-    mapsUrl:'https://www.google.com/maps/place/Vignoble+de+l%E2%80%99Orpailleur/@45.1095737,-72.8590423,17z' },
+    mapsUrl:'https://www.google.com/maps/place/Vignoble+de+l%E2%80%99Orpailleur/@45.1095737,-72.8590423,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9e597451ee6f7:0xf49fe1cd0ed46b39!8m2!3d45.1095737!4d-72.8590423!16s%2Fg%2F1tcxzftg' },
 
-  { id:'v7', name:'La Halte des Pèlerins', town:'Sherbrooke', category:'vineyard', lat:45.4439187, lng:-71.8903897,
+  { id:'v7', name:'La Halte des Pèlerins', town:'Sherbrooke', category:'vineyard',
+    lat:45.4439187, lng:-71.8903897,
     description:'Urban vineyard near downtown Sherbrooke offering approachable wines and numerous activities.',
-    mapsUrl:'https://www.google.com/maps/place/La+Halte+des+P%C3%A8lerins/@45.4439187,-71.8903897,17z' },
+    mapsUrl:'https://www.google.com/maps/place/La+Halte+des+P%C3%A8lerins/@45.4439187,-71.8903897,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7b3fb6912d1bf:0x4dd44f0c3efeb33f!8m2!3d45.4439187!4d-71.8903897!16s%2Fg%2F1thtp5vv' },
 
-  { id:'v8', name:'Clos Saragnat', town:'Frelighsburg', category:'vineyard', lat:45.0376641, lng:-72.7934387,
+  { id:'v8', name:'Clos Saragnat', town:'Frelighsburg', category:'vineyard',
+    lat:45.0376641, lng:-72.7934387,
     description:'Created by pioneer Christian Barthomeuf, famous for its sweet straw wine made from dried grapes.',
-    mapsUrl:'https://www.google.com/maps/place/Clos+Saragnat+-+Vins+%26+Cidres/@45.0376641,-72.7934387,17z' },
+    mapsUrl:'https://www.google.com/maps/place/Clos+Saragnat+-+Vins+%26+Cidres/@45.0376641,-72.7934387,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9fcb942aaeca7:0x2b1433e550059f0e!8m2!3d45.0376641!4d-72.7934387!16s%2Fg%2F11bbrbw9_3' },
 
-  { id:'v9', name:'Le Cep d\'Argent', town:'Magog', category:'vineyard', lat:45.2912677, lng:-72.0561697,
-    description:'Producer of sparkling wines using the Champenoise method with an interpretation centre explaining the process.',
-    mapsUrl:'https://www.google.com/maps/place/Vignoble+Le+Cep+d\'Argent/@45.2912677,-72.0561697,17z' },
+  { id:'v9', name:'Le Cep d\'Argent', town:'Magog', category:'vineyard',
+    lat:45.2912677, lng:-72.0561697,
+    description:'Producer of sparkling wines using the Champenoise method, with an interpretation centre explaining the process.',
+    mapsUrl:'https://www.google.com/maps/place/Vignoble+Le+Cep+d\'Argent/@45.2912677,-72.0561697,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb649a00b77ce47:0x1830f4e86f904f71!8m2!3d45.2912677!4d-72.0561697!16s%2Fg%2F1tdz90jz' },
 
-  { id:'v10', name:'Domaine Bergeville', town:'Canton de Hatley', category:'vineyard', lat:45.2727271, lng:-71.9484994,
+  { id:'v10', name:'Domaine Bergeville', town:'Canton de Hatley', category:'vineyard',
+    lat:45.2727271, lng:-71.9484994,
     description:'Quebec\'s only vineyard devoted solely to sparkling wine using the traditional Brut method. Emphasises environmental practices.',
-    mapsUrl:'https://www.google.com/maps/place/Domaine+Bergeville/@45.2727271,-71.9484994,17z' },
+    mapsUrl:'https://www.google.com/maps/place/Domaine+Bergeville/@45.2727271,-71.9484994,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb64e5065ad9271:0x56b7f5c6578a84ee!8m2!3d45.2727271!4d-71.9484994!16s%2Fg%2F11c0rvk68m' },
 
-  { id:'v11', name:'Vignoble de la Bauge', town:'Brigham', category:'vineyard', lat:45.234658, lng:-72.854751,
+  { id:'v11', name:'Vignoble de la Bauge', town:'Brigham', category:'vineyard',
+    lat:45.234658, lng:-72.854751,
     description:'Scenic vineyard featuring an exotic animal park. Producing organic wines since 2016.',
-    mapsUrl:'https://www.google.com/maps/place/Vignoble+de+la+Bauge/@45.234658,-72.854751,17z' },
+    mapsUrl:'https://www.google.com/maps/place/Vignoble+de+la+Bauge/@45.234658,-72.854751,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9dd8000e93a1f:0x3277d269a68f6fb5!8m2!3d45.234658!4d-72.854751!16s%2Fg%2F1tp8znvg' },
 
-  { id:'v12', name:'Léon Courville Vigneron', town:'Lac-Brome / Knowlton', category:'vineyard', lat:45.262185, lng:-72.58868,
+  { id:'v12', name:'Léon Courville Vigneron', town:'Lac-Brome / Knowlton', category:'vineyard',
+    lat:45.262185, lng:-72.58868,
     description:'Vineyard overlooking Brome Lake, producing award-winning wines and offering tastings on a terrace.',
-    mapsUrl:'https://www.google.com/maps/place/Domaine+Les+Brome+%2F+L%C3%A9on+Courville,+winemaker/@45.262185,-72.58868,17z' },
+    mapsUrl:'https://www.google.com/maps/place/Domaine+Les+Brome+%2F+L%C3%A9on+Courville,+winemaker/@45.262185,-72.58868,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9d8b38f64c8bd:0x55c60cc55d2f80a4!8m2!3d45.262185!4d-72.58868!16s%2Fg%2F1jky8qcrn' },
 
-  { id:'v13', name:'Vignoble Bromont', town:'Brigham / Bromont', category:'vineyard', lat:45.253152, lng:-72.735317,
+  { id:'v13', name:'Vignoble Bromont', town:'Brigham / Bromont', category:'vineyard',
+    lat:45.253152, lng:-72.735317,
     description:'Vineyard with lodging and boutique. Near Micro-brasserie le Brouemont.',
-    mapsUrl:'https://www.google.com/maps/place/Vignoble+Bromont+Auberge+%26+Boutique/@45.253152,-72.735317,17z' },
+    mapsUrl:'https://www.google.com/maps/place/Vignoble+Bromont+Auberge+%26+Boutique/@45.253152,-72.735317,17z/data=!4m9!3m8!1s0x4cc9dcf56f127dc5:0xa59bc38bb8662e17!5m2!4m1!1i2!8m2!3d45.253152!4d-72.735317!16s%2Fg%2F1tf23q1k' },
 
-  // ── BIKE LOOPS ──
+  // ── BIKE LOOPS ─────────────────────────
+  // Radius formula: circumference = distance → radius = distance×1000/(2π)
   { id:'cy1', name:'Circuit du patrimoine', town:'Bedford', category:'bike-loop',
     lat:45.122447, lng:-72.9851886, distance:42,
-    description:'≈42 km loop (38 km paved, 4 km unpaved). Visits the Walbridge 12-sided barn, Quebec\'s smallest covered bridge and heritage homes in Mystic and Stanbridge East. After: cheese platter at Missiska, Missisquoi Museum, wines at Domaine du Ridge or brews at L\'Autre Brasserie.',
-    mapsUrl:'https://www.google.com/maps/place/St.+Damien+Presbytery/@45.122447,-72.9851886,17z',
+    description:'≈42 km loop (38 km paved, 4 km unpaved). Visits the Walbridge 12-sided barn, Quebec\'s smallest covered bridge and heritage homes in Mystic and Stanbridge East. After: cheese at Missiska, Missisquoi Museum, wines at Domaine du Ridge or brews at L\'Autre Brasserie.',
+    mapsUrl:'https://www.google.com/maps/place/St.+Damien+Presbytery/@45.122447,-72.9851886,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9ec2c5c644f5f:0x571722c26ff1e356!8m2!3d45.122447!4d-72.9851886!16s%2Fg%2F1tfmbvx5',
     routeUrl:'https://www.easterntownships.org/cycling/circuit/5/circuit-du-patrimoine', rating:4, ratingLabel:'Exploration' },
 
   { id:'cy2', name:'Magog–Orford', town:'Magog', category:'bike-loop',
     lat:45.2658278, lng:-72.1583451, distance:33,
     description:'≈33 km circuit connecting Magog to Orford. Mostly paved with stretches through Parc national du Mont-Orford and postcard-perfect villages. Stop at Chocolats Vanden Eynden and microbreweries La Memphré and Canton Brasse.',
-    mapsUrl:'https://www.google.com/maps/place/Pointe-Merry+Park/@45.2658278,-72.1583451,17z',
+    mapsUrl:'https://www.google.com/maps/place/Pointe-Merry+Park/@45.2658278,-72.1583451,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb6378db2e19f13:0x13b98239e93312b4!8m2!3d45.2658278!4d-72.1583451!16s%2Fg%2F11c3w017p8',
     routeUrl:'https://www.easterntownships.org/cycling/circuit/8/magog-orford', rating:4, ratingLabel:'Exploration' },
 
   { id:'cy3', name:'Grand tour du lac Mégantic', town:'Lac Mégantic', category:'bike-loop',
     lat:45.5749485, lng:-70.8812728, distance:56,
-    description:'≈56 km loop around Lake Mégantic. Combines shoreline views, wooded sections and some climbs. After: beer at La Gare\'nison or relax at Baie-des-Sables beach. Visit Piopolis village for history and views.',
-    mapsUrl:'https://www.google.com/maps/place/Tourist+Centre+Megantic+Area/@45.5749485,-70.8812728,17z',
+    description:'≈56 km loop around Lake Mégantic. Combines shoreline views, wooded sections and some climbs. After: beer at La Gare\'nison or relax at Baie-des-Sables beach. Visit Piopolis village.',
+    mapsUrl:'https://www.google.com/maps/place/Tourist+Centre+Megantic+Area/@45.5749485,-70.8812728,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7469240ce6c85:0x2883153b4eed4a27!8m2!3d45.5749485!4d-70.8812728!16s%2Fg%2F1thxq7hn',
     routeUrl:'https://www.easterntownships.org/cycling/circuit/21/grand-tour-of-lac-megantic', rating:4, ratingLabel:'Exploration' },
 
   { id:'cy4', name:'Grandes-Fourches Loop', town:'Sherbrooke → North Hatley', category:'bike-loop',
     lat:45.3946506, lng:-71.9274215, distance:52,
     description:'≈52 km loop on the Véloroute des Grandes-Fourches. Follows the Magog, Massawippi and St. François rivers through woodlands and villages. Stop at Golden Lion Pub, Siboire or Cie Vilandré; visit Uplands Cultural Centre and Bishop\'s University.',
-    mapsUrl:'https://www.google.com/maps/place/Parc+Lucien-Blanchard/@45.3946506,-71.9274215,17z',
+    mapsUrl:'https://www.google.com/maps/place/Parc+Lucien-Blanchard/@45.3946506,-71.9274215,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7b4a725555555:0x1783f208f2ea0880!8m2!3d45.3946506!4d-71.9274215!16s%2Fg%2F11cnwctlvv',
     routeUrl:'https://www.easterntownships.org/cycling/circuit/12/grandes-fourches-cycling-network-grandes-fourches-circuit', rating:4, ratingLabel:'Exploration' },
 
   { id:'cy5', name:'Cleveland Loop', town:'Richmond / Danville', category:'bike-loop',
     lat:45.6649132, lng:-72.1479721, distance:44,
-    description:'≈44 km circuit with a mix of gravel (29 km) and paved roads. Highlights include Denison Lake, Grandmont Road\'s maple groves and the heritage village of Danville. After: Café du Couvent or beer at L\'Ardoise cooperative.',
-    mapsUrl:'https://www.google.com/maps/place/Restaurant+La+Vieille+Gare+de+Richmond/@45.6649132,-72.1479721,17z',
+    description:'≈44 km circuit with a mix of gravel (29 km) and paved roads. Highlights: Denison Lake, Grandmont Road\'s maple groves and the heritage village of Danville. After: Café du Couvent or L\'Ardoise cooperative.',
+    mapsUrl:'https://www.google.com/maps/place/Restaurant+La+Vieille+Gare+de+Richmond/@45.6649132,-72.1479721,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7dc606ed19dcf:0x8ff296c759472ebe!8m2!3d45.6649132!4d-72.1479721!16s%2Fg%2F12hq_352n',
     routeUrl:'https://www.easterntownships.org/cycling/circuit/29/cleveland-loop', rating:3, ratingLabel:'Exploration' },
 
   { id:'cy6', name:'La Traverse des Townships', town:'Sutton', category:'bike-loop',
     lat:45.1096718, lng:-72.6141012, distance:47,
-    description:'≈47 km gravel loop starting in Sutton. Climbs Stagecoach Road for panoramic views of the Sutton massif before descending to Brome Lake. After: Auberge Sutton Brouërie, À l\'Abordage, or swim at Douglass Beach in Knowlton.',
-    mapsUrl:'https://www.google.com/maps/place/Sutton+Curling+Club/@45.1096718,-72.6141012,17z',
+    description:'≈47 km gravel loop starting in Sutton. Climbs Stagecoach Road for panoramic views of the Sutton massif before descending to Brome Lake. After: Auberge Sutton Brouërie or swim at Douglass Beach in Knowlton.',
+    mapsUrl:'https://www.google.com/maps/place/Sutton+Curling+Club/@45.1096718,-72.6141012,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb61e7ca7dd6b97:0xc94f1027071f9785!8m2!3d45.1096718!4d-72.6141012!16s%2Fg%2F1tf1bbyz',
     routeUrl:'https://www.easterntownships.org/cycling/circuit/6/la-traverse-des-townships', rating:4, ratingLabel:'Exploration' },
 
   { id:'cy7', name:'Chameleon Mystic / Coaticook Circuit', town:'Coaticook', category:'bike-loop',
     lat:45.1290, lng:-71.8028721, distance:59,
     description:'≈59 km gravel circuit through quiet country roads and maple-tree tunnels. Part of the Pioneer Trail. After: Microbrasserie Coaticook or Hop Station; browse the Coaticook dairy for ice cream.',
-    mapsUrl:'https://www.google.com/maps/place/Jean-D\'Avignon+Park/@45.1278246,-71.8028721,17z',
+    mapsUrl:'https://www.google.com/maps/place/Jean-D\'Avignon+Park/@45.1278246,-71.8028721,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb6593821a1fa27:0x3c0707e188547368!8m2!3d45.1278246!4d-71.8028721!16s%2Fg%2F11jj7sjynk',
     routeUrl:'https://www.easterntownships.org/cycling/circuit/16/mystic-chameleon', rating:4, ratingLabel:'Exploration' },
 
   { id:'cy8', name:'La Grande Boucle de la Vallée', town:'Coaticook', category:'bike-loop',
     lat:45.1258, lng:-71.8028721, distance:116,
     description:'≈116 km gravel circuit with ~1,400 m of elevation across remote dirt roads. Loops through Coaticook, East Hereford and Dixville. Epic ride — end with Coaticook microbrewery or Fromagerie La Station.',
-    mapsUrl:'https://www.google.com/maps/place/Jean-D\'Avignon+Park/@45.1278246,-71.8028721,17z',
+    mapsUrl:'https://www.google.com/maps/place/Jean-D\'Avignon+Park/@45.1278246,-71.8028721,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb6593821a1fa27:0x3c0707e188547368!8m2!3d45.1278246!4d-71.8028721!16s%2Fg%2F11jj7sjynk',
     routeUrl:'https://www.easterntownships.org/cycling/circuit/22/la-grande-boucle-de-la-vallee', rating:2, ratingLabel:'Exploration' },
 
   { id:'cy9', name:'Sir Lyster', town:'Coaticook region', category:'bike-loop',
     lat:45.1298, lng:-71.8028721, distance:34,
     description:'≈34 km primarily paved loop around Lake Lyster. Passes Camping du Lac Lyster, Beaulne Museum and Parc découverte Nature. Swimming at Lake Lyster and craft beer at Hop Station.',
-    mapsUrl:'https://www.google.com/maps/place/Jean-D\'Avignon+Park/@45.1278246,-71.8028721,17z',
+    mapsUrl:'https://www.google.com/maps/place/Jean-D\'Avignon+Park/@45.1278246,-71.8028721,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb6593821a1fa27:0x3c0707e188547368!8m2!3d45.1278246!4d-71.8028721!16s%2Fg%2F11jj7sjynk',
     routeUrl:'https://www.easterntownships.org/cycling/circuit/34/sir-lyster', rating:4, ratingLabel:'Exploration' },
 
   { id:'cy10', name:'Hot Garnotte', town:'Bromont', category:'bike-loop',
     lat:45.3234389, lng:-72.6418976, distance:59,
     description:'≈59 km gravel route with steep climbs near Lac Gale. Designed by champion cyclist Lyne Bessette with sweeping views of the Sutton mountains. After: Pittstop Vélo-Café or a pint at le Brouemont.',
-    mapsUrl:'https://www.google.com/maps/place/Centre+National+de+Cyclisme+de+Bromont+(CNCB)/@45.3234389,-72.6418976,17z',
+    mapsUrl:'https://www.google.com/maps/place/Centre+National+de+Cyclisme+de+Bromont+(CNCB)/@45.3234389,-72.6418976,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9da1b89095193:0xa8b8919e2d443201!8m2!3d45.3234389!4d-72.6418976!16s%2Fm%2F0131jxwx',
     routeUrl:'https://www.easterntownships.org/cycling/circuit/4/hot-garnotte', rating:3, ratingLabel:'Exploration' },
 
   { id:'cy11', name:'Boucle des Érables', town:'Lawrenceville', category:'bike-loop',
     lat:45.3838068, lng:-72.4124855, distance:45,
-    description:'≈45 km loop featuring farmland and maple groves. Agritourism stops include Marchand chez Duff general store, Jardins Zone Orange (sea-buckthorn plantation), Cinézoo animal park and a donkey farm. Great views of Mount Orford from Rang 9 Ouest.',
-    mapsUrl:'https://www.google.com/maps/place/Jardins+Zone+Orange/@45.3838068,-72.4124855,17z',
+    description:'≈45 km loop featuring farmland and maple groves. Agritourism stops include Marchand chez Duff general store, Jardins Zone Orange (sea-buckthorn plantation), Cinézoo animal park and a donkey farm. Views of Mount Orford from Rang 9 Ouest.',
+    mapsUrl:'https://www.google.com/maps/place/Jardins+Zone+Orange/@45.3838068,-72.4124855,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb62bde9ab766cf:0xd75b8e9f2ad2469c!8m2!3d45.3838068!4d-72.4124855!16s%2Fg%2F11c48f9s57',
     routeUrl:'https://www.easterntownships.org/cycling/circuit/32/boucle-des-erables', rating:4, ratingLabel:'Exploration' },
 
   { id:'cy12', name:'Rivière du Nord Loop', town:'Bury', category:'bike-loop',
     lat:45.4990304, lng:-71.5291786, distance:42.5,
-    description:'≈42.5 km round-trip on unpaved roads. Scenic gravel roads wind through forests with gentle climbs. Highlights: McDermott Covered Bridge and an outdoor exhibition on Bury\'s military history.',
-    mapsUrl:'https://www.google.com/maps/place/Memorial+Park/@45.4990304,-71.5291786,17z',
+    description:'≈42.5 km on unpaved roads. Scenic gravel roads wind through forests with gentle climbs. Highlights: McDermott Covered Bridge and an outdoor exhibition on Bury\'s military history.',
+    mapsUrl:'https://www.google.com/maps/place/Memorial+Park/@45.4990304,-71.5291786,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb70863583b1303:0x488aacc43aaff0d2!8m2!3d45.4990304!4d-71.5291786!16s%2Fg%2F11ggls9p_7',
     routeUrl:'https://www.easterntownships.org/cycling/circuit/36/riviere-du-nord', rating:3, ratingLabel:'Exploration' },
 
   { id:'cy13', name:'Mont-Ham Loops', town:'Saint-Camille', category:'bike-loop',
     lat:45.6833905, lng:-71.7027836, distance:49,
-    description:'≈49 km loop (28.5 km unpaved, 20.5 km paved). Scenic gravel roads lead to Mont-Ham Regional Park with a steep hike rewarding you with 360° views. Coffee at Le P\'tit Bonheur de Saint-Camille.',
-    mapsUrl:'https://www.google.com/maps/place/Centre+Le+Camillois+(Destination+Saint-Camille)/@45.6833905,-71.7027836,17z',
+    description:'≈49 km loop (28.5 km unpaved, 20.5 km paved). Scenic gravel roads lead to Mont-Ham Regional Park where a steep hike rewards you with 360° views. Coffee at Le P\'tit Bonheur de Saint-Camille.',
+    mapsUrl:'https://www.google.com/maps/place/Centre+Le+Camillois+(Destination+Saint-Camille)/@45.6833905,-71.7027836,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7965a7f901067:0xa7e4df74d0738c06!8m2!3d45.6833905!4d-71.7027836!16s%2Fg%2F11df053h04',
     routeUrl:'https://www.easterntownships.org/cycling/circuit/28/mont-ham-loops', rating:3, ratingLabel:'Exploration' },
 
   { id:'cy14', name:'Le bassin des deux rivières', town:'Cookshire-Eaton', category:'bike-loop',
     lat:45.4098232, lng:-71.6344821, distance:38.5,
     description:'≈38.5 km loop (29 km unpaved, 9.5 km paved). Travels along two rivers. Stops: Cœur villageois of Cookshire-Eaton, Marché du Voisinage, Les Mal-Aimés restaurant, Circuit des sheds panoramiques and Sawyerville village.',
-    mapsUrl:'https://www.google.com/maps/place/11+Comt%C3%A9s+-+Brasserie+Rurale+Brewery/@45.4098232,-71.6344821,17z',
+    mapsUrl:'https://www.google.com/maps/place/11+Comt%C3%A9s+-+Brasserie+Rurale+Brewery/@45.4098232,-71.6344821,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7a9889d6e10c3:0x6ab348b9c63599d2!8m2!3d45.4098232!4d-71.6344821!16s%2Fg%2F11dxj04zq7',
     routeUrl:'https://www.easterntownships.org/cycling/circuit/31/le-bassin-des-deux-rivieres', rating:4, ratingLabel:'Exploration' },
 
   { id:'cy15', name:'From Dock to Dock', town:'Georgeville → Fitch Bay', category:'bike-loop',
     lat:45.1392829, lng:-72.2558622, distance:55,
     description:'≈55 km figure-8 loop, 85% gravel. Lakefront roads, farmland and panoramic ridges. Highlights: Narrows Covered Bridge, Harvey Bay\'s boathouses, Weir Memorial Park swim, Chemin Laflamme 360° views and Auberge McGowan\'s farm-to-table cuisine.',
-    mapsUrl:'https://www.google.com/maps/place/The+Georgeville+Wharf/@45.1392829,-72.2558622,17z',
+    mapsUrl:'https://www.google.com/maps/place/The+Georgeville+Wharf/@45.1392829,-72.2558622,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb63fc9ee72aa75:0xd99c53b0bd7618e8!8m2!3d45.1392829!4d-72.2558622!16s%2Fg%2F11c2j7m81c',
     routeUrl:'https://www.easterntownships.org/cycling/circuit/26/from-dock-to-dock', rating:4, ratingLabel:'Exploration' },
 
   { id:'cy16', name:'Marécage Loop', town:'Scotstown / Val-Racine', category:'bike-loop',
     lat:45.4801309, lng:-71.210724, distance:54.5,
     description:'≈54.5 km loop near Mont-Mégantic National Park (39 km unpaved road, 8.5 km unpaved bike path). Passes villages of Val-Racine and Milan. Features Walter-Mackenzie Park and Marécage-des-Scots regional park.',
-    mapsUrl:'https://www.google.com/maps/place/Parc+national+du+Mont-M%C3%A9gantic/@45.4801309,-71.210724,17z',
+    mapsUrl:'https://www.google.com/maps/place/Parc+national+du+Mont-M%C3%A9gantic+-+Secteur+de+Franceville/@45.4801309,-71.210724,17z/data=!4m9!3m8!1s0x4cb716b2c8930b31:0xa04017dd19de4d3f!5m2!4m1!1i2!8m2!3d45.4801309!4d-71.210724!16s%2Fg%2F11c1vkfs9s',
     routeUrl:'https://www.easterntownships.org/cycling/circuit/30/marecage-loop', rating:3, ratingLabel:'Exploration' },
 
   { id:'cy17', name:'La Lanterne Rouge', town:'Bromont → Knowlton', category:'bike-loop',
     lat:45.3332843, lng:-72.6498934, distance:51,
-    description:'≈51 km loop (intermediate) around Brome Lake. Panoramic lake views and gourmet stops at two vineyards and local producers. Cycle through Knowlton\'s Cœur villageois for pastries; swim at Douglass Beach.',
-    mapsUrl:'https://www.google.com/maps/place/Information+Touristique+De+Bromont/@45.3332843,-72.6498934,17z',
+    description:'≈51 km loop (intermediate) around Brome Lake. Panoramic lake views and gourmet stops at two vineyards. Cycle through Knowlton\'s Cœur villageois for pastries; swim at Douglass Beach.',
+    mapsUrl:'https://www.google.com/maps/place/Information+Touristique+De+Bromont/@45.3332843,-72.6498934,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9da0ecaad97d5:0x71db6e21f1e29b35!8m2!3d45.3332843!4d-72.6498934!16s%2Fg%2F1tdyqdtj',
     routeUrl:'https://www.laroutedesvins.ca/en/itinerary/la-lanterne-rouge/', rating:4, ratingLabel:'Exploration' },
 
   { id:'cy18', name:'La Doyenne des vignes', town:'Frelighsburg ↔ Dunham', category:'bike-loop',
     lat:45.0558973, lng:-72.837639, distance:76.5,
-    description:'≈76.5 km mostly paved tour through Quebec\'s oldest wine region. Visits up to five vineyards (Val Caudalies, Vignoble du Ruisseau, Vignoble de la Bauge, l\'Ardennais and others) and Brasserie Dunham.',
-    mapsUrl:'https://www.google.com/maps/place/Frelighsburg+Information+Trstq/@45.0558973,-72.837639,17z',
+    description:'≈76.5 km mostly paved tour through Quebec\'s oldest wine region. Visits up to five vineyards (Val Caudalies, Vignoble du Ruisseau, Vignoble de la Bauge, L\'Ardennais and others) and Brasserie Dunham.',
+    mapsUrl:'https://www.google.com/maps/place/Frelighsburg+Information+Trstq/@45.0558973,-72.837639,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9fb347c24a59d:0xe33d610af3cb51b2!8m2!3d45.0558973!4d-72.837639!16s%2Fg%2F11b5whzm0h',
     routeUrl:'https://www.laroutedesvins.ca/circuit/la-doyenne-des-vignes/', rating:2, ratingLabel:'Exploration' },
 
-  // ── VILLAGES ──
-  { id:'vl1', name:'Sutton', town:'Sutton', category:'village', lat:45.105894, lng:-72.6166646,
+  // ── VILLAGES ───────────────────────────
+  { id:'vl1', name:'Sutton', town:'Sutton', category:'village',
+    lat:45.105894, lng:-72.6166646,
     description:'Mountain village known for outdoor adventures and a Vélosympathique cycling culture. Nearby: Domaine Bresee vineyard, Le Cafetier micro-roastery, and microbreweries À l\'Abordage and Auberge Sutton Brouërie.',
-    mapsUrl:'https://www.google.com/maps/place/Sutton,+QC/@45.105894,-72.6166646,12z' },
+    mapsUrl:'https://www.google.com/maps/place/Sutton,+QC/@45.0858191,-72.587162,12z/data=!3m1!4b1!4m6!3m5!1s0x4cb61e78d1f51225:0x5040cadb2bb4a70!8m2!3d45.105894!4d-72.6166646!16s%2Fm%2F047dlz3' },
 
-  { id:'vl2', name:'Frelighsburg', town:'Frelighsburg', category:'village', lat:45.055473, lng:-72.837506,
+  { id:'vl2', name:'Frelighsburg', town:'Frelighsburg', category:'village',
+    lat:45.055473, lng:-72.837506,
     description:'One of Canada\'s most beautiful villages, retaining 18th-century brick and wooden buildings including the Freligh Mill (1839). Visit Beat & Betterave microbrewery and La Rumeur Affamée delicatessen.',
-    mapsUrl:'https://www.google.com/maps/place/Frelighsburg,+QC+J0J+1C0/@45.055473,-72.837506,15z' },
+    mapsUrl:'https://www.google.com/maps/place/Frelighsburg,+QC+J0J+1C0/@45.0554724,-72.837506,15z/data=!3m1!4b1!4m6!3m5!1s0x4cc9fb57a7b7ec67:0xecec94294bff8a7e!8m2!3d45.055473!4d-72.837506!16s%2Fm%2F047b1xh' },
 
-  { id:'vl3', name:'North Hatley', town:'North Hatley', category:'village', lat:45.2754852, lng:-71.9731101,
+  { id:'vl3', name:'North Hatley', town:'North Hatley', category:'village',
+    lat:45.2754852, lng:-71.9731101,
     description:'Lakeside "dollhouse" village on Lake Massawippi. Loyalist-era homes house art galleries, antique shops, cafés and B&Bs. A 34-mile bike path along the Massawippi River starts here.',
-    mapsUrl:'https://www.google.com/maps/place/North+Hatley,+QC+J0B+2C0/@45.2754852,-71.9731101,15z' },
+    mapsUrl:'https://www.google.com/maps/place/North+Hatley,+QC+J0B+2C0/@45.2705334,-71.9800334,15z/data=!3m1!4b1!4m6!3m5!1s0x4cb64eef0a69e511:0x286c8173685f0741!8m2!3d45.2754852!4d-71.9731101!16zL20vMDdnc2tq' },
 
-  { id:'vl4', name:'Knowlton (Lac-Brome)', town:'Knowlton', category:'village', lat:45.2199354, lng:-72.5119276,
+  { id:'vl4', name:'Knowlton (Lac-Brome)', town:'Knowlton', category:'village',
+    lat:45.2199354, lng:-72.5119276,
     description:'Resort town with Loyalist-era architecture, antique shops and pastry shops. Brome Lake duck appears on many menus. Check out microbrewery La Knowlton Co.',
-    mapsUrl:'https://www.google.com/maps/place/Knowlton,+Lac-Brome,+QC+J0E+1V0/@45.2199354,-72.5119276,14z' },
+    mapsUrl:'https://www.google.com/maps/place/Knowlton,+Lac-Brome,+QC+J0E+1V0/@45.2215845,-72.5199493,14z/data=!3m1!4b1!4m6!3m5!1s0x4cb6213fbaef9aef:0x62fc34dd5500e099!8m2!3d45.2199354!4d-72.5119276!16s%2Fg%2F1v9tzhs3' },
 
-  { id:'vl5', name:'Eastman', town:'Eastman', category:'village', lat:45.301296, lng:-72.315042,
-    description:'Literary village with a community library and the Correspondances d\'Eastman festival. Walk the Parc du Temps qui Passe sundial park, follow the literary trail around Lake d\'Argent, or explore Parc Missisquoi-Nord.',
-    mapsUrl:'https://www.google.com/maps/place/Eastman,+QC/@45.301296,-72.315042,12z' },
+  { id:'vl5', name:'Eastman', town:'Eastman', category:'village',
+    lat:45.301296, lng:-72.315042,
+    description:'Literary village with the Correspondances d\'Eastman festival. Walk the Parc du Temps qui Passe sundial park, follow the literary trail around Lake d\'Argent, or explore Parc Missisquoi-Nord.',
+    mapsUrl:'https://www.google.com/maps/place/Eastman,+QC/@45.3305895,-72.3029236,12z/data=!3m1!4b1!4m6!3m5!1s0x4cb630139efea2f7:0x5040cadb2a2a420!8m2!3d45.301296!4d-72.315042!16zL20vMGYxOTBw' },
 
-  { id:'vl6', name:'Stanbridge East', town:'Stanbridge East', category:'village', lat:45.121587, lng:-72.915659,
-    description:'Loyalist village preserving the Anglican Church (1860), United Church (1844) and Hodge\'s General Store. The Missisquoi Museum and Walbridge Barn tell local history. Try L\'Oeuf artisanal chocolate and the apple-pie festival.',
-    mapsUrl:'https://www.google.com/maps/place/Stanbridge+East,+QC+J0J+0B7/@45.121587,-72.915659,15z' },
+  { id:'vl6', name:'Stanbridge East', town:'Stanbridge East', category:'village',
+    lat:45.121587, lng:-72.915659,
+    description:'Loyalist village preserving the Anglican Church (1860), United Church (1844) and Hodge\'s General Store. The Missisquoi Museum and Walbridge Barn tell local history. Try L\'Oeuf artisanal chocolate.',
+    mapsUrl:'https://www.google.com/maps/place/Stanbridge+East,+QC+J0J+0B7/@45.1215864,-72.915659,15z/data=!3m1!4b1!4m6!3m5!1s0x4cc9ef04e377ae1f:0x8b1097663a59fb84!8m2!3d45.121587!4d-72.915659!16s%2Fg%2F1tdz4g2x' },
 
-  { id:'vl7', name:'Piopolis', town:'Piopolis', category:'village', lat:45.486564, lng:-70.903816,
+  { id:'vl7', name:'Piopolis', town:'Piopolis', category:'village',
+    lat:45.486564, lng:-70.903816,
     description:'Waterfront village on Lake Mégantic with mountain views. Walk the heritage trail and learn local history at the Halte des Zouaves. Sugar pie at the general store or dine at Auberge Au Soleil Levant.',
-    mapsUrl:'https://www.google.com/maps/place/Piopolis,+QC+G0Y+1H0/@45.486564,-70.903816,15z' },
+    mapsUrl:'https://www.google.com/maps/place/Piopolis,+QC+G0Y+1H0/@45.4865635,-70.903816,15z/data=!3m1!4b1!4m6!3m5!1s0x4cb73848bda4759d:0x8240e43c61f5daa8!8m2!3d45.486564!4d-70.903816!16zL20vMGYzajRz' },
 
-  { id:'vl8', name:'Lambton', town:'Lambton', category:'village', lat:45.8406595, lng:-71.0890802,
+  { id:'vl8', name:'Lambton', town:'Lambton', category:'village',
+    lat:45.8406595, lng:-71.0890802,
     description:'Overlooks Lake Saint-François with the majestic St-Vital church and a walking circuit featuring an art gallery. Stay at B&Bs or campgrounds and explore nearby Frontenac National Park.',
-    mapsUrl:'https://www.google.com/maps/place/Lambton,+QC+G0M+1H0/@45.8406595,-71.0890802,14z' },
+    mapsUrl:'https://www.google.com/maps/place/Lambton,+QC+G0M+1H0/@45.8382785,-71.085942,14z/data=!3m1!4b1!4m6!3m5!1s0x4cb77d240bca5261:0x8ae915e0ff533d26!8m2!3d45.8406595!4d-71.0890802!16zL20vMGYzajc1' },
 
-  // ── SCENIC DRIVES ──
-  { id:'sd1', name:'Brome-Missisquoi Wine Route', town:'Dunham area', category:'scenic-drive', lat:45.1323856, lng:-72.8007973,
-    description:'160 km marked route crossing hills and villages. Links 24–25 vineyards, accounting for 60% of Quebec\'s wine production. "Amis de la Route des vins" stops include restaurants, B&Bs and attractions.',
-    mapsUrl:'https://www.google.com/maps/place/Maison+des+vins+de+Brome-Missisquoi/@45.1323856,-72.8007973,17z' },
+  // ── SCENIC DRIVES ──────────────────────
+  { id:'sd1', name:'Brome-Missisquoi Wine Route', town:'Dunham area', category:'scenic-drive',
+    lat:45.1323856, lng:-72.8007973,
+    description:'160 km marked circuit crossing hills and villages. Links 24–25 vineyards, accounting for 60% of Quebec\'s wine production. Passes Frelighsburg, Saint-Armand, Bedford, Brigham, Farnham, Bromont, Knowlton and Sutton. "Amis de la Route des vins" stops include restaurants, B&Bs and attractions.',
+    mapsUrl:'https://www.google.com/maps/place/Maison+des+vins+de+Brome-Missisquoi/@45.1323856,-72.8007973,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9e73e90240567:0x565c16902243db25!8m2!3d45.1323856!4d-72.8007973!16s%2Fg%2F11t6hms2j1' },
 
-  { id:'sd2', name:'Townships Trail (Chemin des Cantons)', town:'Region-wide', category:'scenic-drive', lat:45.3955322, lng:-71.9465995,
-    description:'430 km heritage route with 38 stops across 31 towns. Features Victorian homes, round barns, covered bridges, museums and churches.',
-    mapsUrl:'https://www.google.com/maps/place/Tourism+Eastern+Townships/@45.3955322,-71.9465995,17z' },
+  { id:'sd2', name:'Townships Trail (Chemin des Cantons)', town:'Region-wide', category:'scenic-drive',
+    lat:45.3955322, lng:-71.9465995,
+    description:'430 km heritage route with 38 stops across 31 towns. Runs from Granby in the west through Bromont, Waterloo, Magog, North Hatley, Sherbrooke, Windsor, Richmond, Cookshire-Eaton and Lac-Mégantic to Lambton in the east. Features Victorian homes, round barns, covered bridges, museums and churches.',
+    mapsUrl:'https://www.google.com/maps/place/Tourism+Eastern+Townships/@45.3955322,-71.9465995,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7b501dcb77307:0xa4ef70195b3aa1aa!8m2!3d45.3955322!4d-71.9465995!16s%2Fg%2F11fj7ty9q1' },
 
-  { id:'sd3', name:'Summit Drive (Route des Sommets)', town:'La Patrie → Saint-Adrien', category:'scenic-drive', lat:45.4246826, lng:-71.2561487,
-    description:'193 km circuit linking the highest peaks between La Patrie and Saint-Adrien. Panoramic views of mountains and lakes, plus stargazing opportunities in the Dark-Sky Reserve.',
-    mapsUrl:'https://www.google.com/maps/place/Halte+du+Soleil-Levant/@45.4246826,-71.2561487,17z' },
+  { id:'sd3', name:'Summit Drive (Route des Sommets)', town:'La Patrie → Saint-Adrien', category:'scenic-drive',
+    lat:45.4246826, lng:-71.2561487,
+    description:'193 km circuit linking the highest Appalachian peaks between La Patrie and Saint-Adrien. Loops through Scotstown, Lac-Mégantic, Piopolis, Bury, Saint-Camille and Windsor. Panoramic mountain and lake views, plus stargazing in the Dark-Sky Reserve.',
+    mapsUrl:'https://www.google.com/maps/place/Halte+du+Soleil-Levant/@45.4246826,-71.2561487,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb711005230c14b:0xb570be31d874adc7!8m2!3d45.4246826!4d-71.2561487!16s%2Fg%2F11x1_p2gky' },
 
-  // ── LAKES & BEACHES ──
-  { id:'lk1', name:'Douglass Beach (Lac Brome)', town:'Knowlton', category:'lake', lat:45.2261882, lng:-72.5041729,
+  // ── LAKES & BEACHES ────────────────────
+  { id:'lk1', name:'Douglass Beach (Lac Brome)', town:'Knowlton', category:'lake',
+    lat:45.2261882, lng:-72.5041729,
     description:'Public beach with soft sand, volleyball court, picnic tables and views of Brome Lake. Perfect for a quick swim after visiting Knowlton.',
-    mapsUrl:'https://www.google.com/maps/place/Douglass+Beach/@45.2261882,-72.5041729,17z' },
+    mapsUrl:'https://www.google.com/maps/place/Douglass+Beach/@45.2261882,-72.5041729,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb621464a309bd5:0xfd2ec16ef7b4c667!8m2!3d45.2261882!4d-72.5041729!16s%2Fg%2F1trtty1p' },
 
-  { id:'lk2', name:'Lake Lyster Municipal Beach', town:'Coaticook', category:'lake', lat:45.0330911, lng:-71.9195861,
+  { id:'lk2', name:'Lake Lyster Municipal Beach', town:'Coaticook', category:'lake',
+    lat:45.0330911, lng:-71.9195861,
     description:'200-m sandy beach with lifeguards, picnic tables and boat rentals. Stunning view of Mont Pinacle.',
-    mapsUrl:'https://www.google.com/maps/place/Beach+Lake+Lyster/@45.0330911,-71.9195861,17z' },
+    mapsUrl:'https://www.google.com/maps/place/Beach+Lake+Lyster/@45.0330911,-71.9195861,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb660e6cfe42323:0x95fc1a1eb838c5c1!8m2!3d45.0330911!4d-71.9195861!16s%2Fg%2F11bw4tjmvc' },
 
-  { id:'lk3', name:'Baie-des-Sables Beach (Lac Mégantic)', town:'Lac Mégantic', category:'lake', lat:45.5875699, lng:-70.9278601,
+  { id:'lk3', name:'Baie-des-Sables Beach (Lac Mégantic)', town:'Lac Mégantic', category:'lake',
+    lat:45.5875699, lng:-70.9278601,
     description:'Family-friendly beach at Station touristique Baie-des-Sables with restaurants, rental shops and watersports.',
-    mapsUrl:'https://www.google.com/maps/place/Plage+Baie+des+Sables/@45.5875699,-70.9278601,17z' },
+    mapsUrl:'https://www.google.com/maps/place/Plage+Baie+des+Sables/@45.5875699,-70.9278601,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb741b13983369b:0xa266ec32d051b94d!8m2!3d45.5875699!4d-70.9278601!16s%2Fg%2F11q1v1fmtb' },
 
-  { id:'lk4', name:'Camping du lac McKenzie (Lac Brompton)', town:'Lac Brompton', category:'lake', lat:45.4744249, lng:-72.1408785,
+  { id:'lk4', name:'Camping du lac McKenzie (Lac Brompton)', town:'Lac Brompton', category:'lake',
+    lat:45.4744249, lng:-72.1408785,
     description:'Public beach with pristine water quality and activities like volleyball and kayaking. Day passes available.',
-    mapsUrl:'https://www.google.com/maps/place/Camping+Plage+McKenzie/@45.4744249,-72.1408785,17z' },
+    mapsUrl:'https://www.google.com/maps/place/Camping+Plage+McKenzie/@45.4744249,-72.1408785,17z/data=!4m9!3m8!1s0x4cb7cbf607ae3f49:0x39b8187a0f2d45da!5m2!4m1!1i2!8m2!3d45.4744249!4d-72.1408785!16s%2Fg%2F1v_w1zkl' },
 
-  { id:'lk5', name:'Plage du Lac Stukely (Mont-Orford Park)', town:'Orford', category:'lake', lat:45.3645114, lng:-72.2370769,
-    description:'Beach inside Mont-Orford National Park on Lac Stukely. Clean, park-managed with hiking and paddling nearby.',
-    mapsUrl:'https://www.google.com/maps/place/Plage+du+Lac+Stukely/@45.3645114,-72.2370769,15z' },
+  { id:'lk5', name:'Plage du Lac Stukely (Mont-Orford Park)', town:'Orford', category:'lake',
+    lat:45.3645114, lng:-72.2370769,
+    description:'Beach inside Mont-Orford National Park on Lac Stukely. Park-managed, clean, with hiking and paddling nearby. Also within the park: Lac Fraser beach.',
+    mapsUrl:'https://www.google.com/maps/place/Plage+du+Lac+Stukely/@45.3645114,-72.2370769,15z/data=!3m1!4b1!4m6!3m5!1s0x4cb63236b6585449:0xc1f614693f9cc8f8!8m2!3d45.3645119!4d-72.2370769!16s%2Fg%2F11h1p1ct0n' },
 
-  { id:'lk6', name:'Lake Memphrémagog — Plage des Cantons', town:'Magog', category:'lake', lat:45.2708176, lng:-72.1780499,
-    description:'42 km glacial lake. Three public beaches in Magog with boat rentals, cruises and watersports. The Plage des Cantons is the most accessible.',
-    mapsUrl:'https://www.google.com/maps/place/Plage+des+Cantons/@45.2708176,-72.1780499,15z' },
+  { id:'lk6', name:'Lake Memphrémagog — Plage des Cantons', town:'Magog', category:'lake',
+    lat:45.2708176, lng:-72.1780499,
+    description:'42 km glacial lake with three public beaches in Magog. Boat rentals, cruises and watersports. Plage des Cantons is the most accessible; also Pointe-Merry and Plage de l\'Ouest.',
+    mapsUrl:'https://www.google.com/maps/place/Plage+des+Cantons/@45.2708176,-72.1780499,15z/data=!3m1!4b1!4m6!3m5!1s0x4cb6378294765291:0xf1d2017101cf97d1!8m2!3d45.2708182!4d-72.1780499!16s%2Fg%2F11h8y4p3_p' },
 
-  { id:'lk7', name:'Lake Massawippi (North Hatley)', town:'North Hatley', category:'lake', lat:45.2703127, lng:-71.9772867,
+  { id:'lk7', name:'Lake Massawippi (North Hatley)', town:'North Hatley', category:'lake',
+    lat:45.2703127, lng:-71.9772867,
     description:'Deep, clear lake with swimming at North Hatley\'s wharf. Boat rentals available and the charming village is right there.',
-    mapsUrl:'https://www.google.com/maps/place/North+Hatley+Recreation+Society/@45.2703127,-71.9772867,17z' },
+    mapsUrl:'https://www.google.com/maps/place/North+Hatley+Recreation+Society/@45.2703127,-71.9772867,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb64f1d6f1587c7:0xc44a11cca985a614!8m2!3d45.2703127!4d-71.9772867!16s%2Fg%2F11b5yr5w2l' },
 
-  // ── CAFÉS ──
-  { id:'c1', name:'Café Hubert Saint-Jean', town:'Sherbrooke / Magog', category:'cafe', lat:45.3991722, lng:-71.8967883,
+  // ── CAFÉS ──────────────────────────────
+  { id:'c1', name:'Café Hubert Saint-Jean', town:'Sherbrooke / Magog', category:'cafe',
+    lat:45.3991722, lng:-71.8967883,
     description:'The region\'s oldest roaster (1923), producing about 60,000 pounds of coffee annually. Ensures fair pay for Honduran growers. Multiple locations in Sherbrooke and Magog.',
-    mapsUrl:'https://www.google.com/maps/place/Caf%C3%A9+Hubert+Saint-Jean/@45.3991722,-71.8967883,17z', rating:4, ratingLabel:'Charm' },
+    mapsUrl:'https://www.google.com/maps/place/Caf%C3%A9+Hubert+Saint-Jean/@45.3991722,-71.8967883,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7b368da89785b:0x68f0c57577a95cf4!8m2!3d45.3991722!4d-71.8967883!16s%2Fg%2F1tdzw9qf',
+    rating:4, ratingLabel:'Charm' },
 
-  { id:'c2', name:'Brûlerie Faro', town:'Sherbrooke', category:'cafe', lat:45.404276, lng:-71.89198,
-    description:'Established in 1982, multiple shops. Classic, sustainable and limited-edition blends. Recently adopted biodegradable cups and waste-reduction measures. Multiple Sherbrooke locations.',
-    mapsUrl:'https://www.google.com/maps/place/Br%C3%BBlerie+FARO/@45.404276,-71.89198,17z', rating:3, ratingLabel:'Charm' },
+  { id:'c2', name:'Brûlerie Faro', town:'Sherbrooke', category:'cafe',
+    lat:45.404276, lng:-71.89198,
+    description:'Established in 1982 with multiple shops. Classic, sustainable and limited-edition blends. Recently adopted biodegradable cups and waste-reduction measures.',
+    mapsUrl:'https://www.google.com/maps/place/Br%C3%BBlerie+FARO/@45.404276,-71.89198,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7b30ec11de81b:0x51e9c213a84b96cf!8m2!3d45.404276!4d-71.89198!16s%2Fg%2F1tfm11lt',
+    rating:3, ratingLabel:'Charm' },
 
-  { id:'c3', name:'Brûlerie Virgin Hill', town:'Brome Lake / Foster', category:'cafe', lat:45.2929001, lng:-72.5009003,
+  { id:'c3', name:'Brûlerie Virgin Hill', town:'Brome Lake / Foster', category:'cafe',
+    lat:45.2929001, lng:-72.5009003,
     description:'Family-owned for two decades, sourcing beans from 18 countries. Learn the art of roasting during workshops.',
-    mapsUrl:'https://www.google.com/maps/place/Br%C3%BBlerie+Virgin+Hill+Coffee/@45.2929001,-72.5009003,17z', rating:4, ratingLabel:'Charm' },
+    mapsUrl:'https://www.google.com/maps/place/Br%C3%BBlerie+Virgin+Hill+Coffee/@45.2929001,-72.5009003,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb62779b45588d5:0xa29a626462f79c82!8m2!3d45.2929001!4d-72.5009003!16s%2Fg%2F11flkxhf2t',
+    rating:4, ratingLabel:'Charm' },
 
-  { id:'c4', name:'Fitch Bay Café', town:'Magog', category:'cafe', lat:45.2626533, lng:-72.1399002,
-    description:'Micro-roaster in Magog\'s historic Cotton Mills building. 7–8 tons of coffee annually across 20–25 blends.',
-    mapsUrl:'https://www.google.com/maps/place/Fitch+Bay+Caf%C3%A9/@45.2626533,-72.1399002,17z', rating:4, ratingLabel:'Charm' },
+  { id:'c4', name:'Fitch Bay Café', town:'Magog', category:'cafe',
+    lat:45.2626533, lng:-72.1399002,
+    description:'Micro-roaster in Magog\'s historic Cotton Mills building. Produces 7–8 tons of coffee annually across 20–25 blends.',
+    mapsUrl:'https://www.google.com/maps/place/Fitch+Bay+Caf%C3%A9/@45.2626533,-72.1399002,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb641b6a64bd7ed:0x167125de89ad0926!8m2!3d45.2626533!4d-72.1399002!16s%2Fg%2F11h5rf95h8',
+    rating:4, ratingLabel:'Charm' },
 
-  { id:'c5', name:'Le Café de la Brûlerie', town:'Granby', category:'cafe', lat:45.3974781, lng:-72.7161348,
+  { id:'c5', name:'Le Café de la Brûlerie', town:'Granby', category:'cafe',
+    lat:45.3974781, lng:-72.7161348,
     description:'Roasts and grinds its own beans on site. About 20 coffee blends. Near the Estriade and Montérégiade bike paths.',
-    mapsUrl:'https://www.google.com/maps/place/Caf%C3%A9+De+La+Br%C3%BBlerie+(Le)/@45.3974781,-72.7161348,17z', rating:3, ratingLabel:'Charm' },
+    mapsUrl:'https://www.google.com/maps/place/Caf%C3%A9+De+La+Br%C3%BBlerie+(Le)/@45.3974781,-72.7161348,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9ce3a5ddab531:0xdf13e937db86a7f9!8m2!3d45.3974781!4d-72.7161348!16s%2Fg%2F1td60brx',
+    rating:3, ratingLabel:'Charm' },
 
-  { id:'c6', name:'Géogène Micro-Torréfacteur', town:'Sherbrooke / Magog', category:'cafe', lat:45.407862, lng:-71.8769014,
+  { id:'c6', name:'Géogène Micro-Torréfacteur', town:'Sherbrooke / Magog', category:'cafe',
+    lat:45.407862, lng:-71.8769014,
     description:'Ethical micro-roaster with locations in Sherbrooke and Magog. About ten blends with conscientious sourcing practices.',
-    mapsUrl:'https://www.google.com/maps/place/G%C3%A9og%C3%A8ne+Micro-torr%C3%A9facteur/@45.407862,-71.8769014,17z', rating:3, ratingLabel:'Charm' },
+    mapsUrl:'https://www.google.com/maps/place/G%C3%A9og%C3%A8ne+Micro-torr%C3%A9facteur/@45.407862,-71.8769014,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7b3c9052199a9:0xed4ed60d08968f3f!8m2!3d45.407862!4d-71.8769014!16s%2Fg%2F11fwh0qwjt',
+    rating:3, ratingLabel:'Charm' },
 
-  { id:'c7', name:'Appalaches Torréfacteur', town:'Mansonville', category:'cafe', lat:45.0501048, lng:-72.3912888,
+  { id:'c7', name:'Appalaches Torréfacteur', town:'Mansonville', category:'cafe',
+    lat:45.0501048, lng:-72.3912888,
     description:'Small roastery (opened 2020) offering a dozen grinds. Partners with local producers such as La Pinte dairy.',
-    mapsUrl:'https://www.google.com/maps/place/Appalaches+%7C+Torr%C3%A9facteur+-+Roaster/@45.0501048,-72.3912888,17z', rating:3, ratingLabel:'Charm' },
+    mapsUrl:'https://www.google.com/maps/place/Appalaches+%7C+Torr%C3%A9facteur+-+Roaster/@45.0501048,-72.3912888,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb611c18ee9e25d:0xffc99cfacb511a32!8m2!3d45.0501048!4d-72.3912888!16s%2Fg%2F11hhr404cx',
+    rating:3, ratingLabel:'Charm' },
 
-  { id:'c8', name:'Café du Couvent Coop', town:'Richmond', category:'cafe', lat:45.6683807, lng:-72.1493377,
+  { id:'c8', name:'Café du Couvent Coop', town:'Richmond', category:'cafe',
+    lat:45.6683807, lng:-72.1493377,
     description:'Café in a heritage building. Vegetarian meals, desserts and coffee from local roasters. Warm and charming atmosphere.',
-    mapsUrl:'https://www.google.com/maps/place/Caf%C3%A9+du+Couvent/@45.6683807,-72.1493377,17z', rating:4, ratingLabel:'Charm' },
+    mapsUrl:'https://www.google.com/maps/place/Caf%C3%A9+du+Couvent/@45.6683807,-72.1493377,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7dd0d9c19d5d7:0x71db3cd488a80052!8m2!3d45.6683807!4d-72.1493377!16s%2Fg%2F11flgdwmbb',
+    rating:4, ratingLabel:'Charm' },
 
-  { id:'c9', name:'Café Madame Hortense', town:'Granby', category:'cafe', lat:45.3957236, lng:-72.732648,
+  { id:'c9', name:'Café Madame Hortense', town:'Granby', category:'cafe',
+    lat:45.3957236, lng:-72.732648,
     description:'Cozy café combining coffee shop with a gift shop and local artwork. A hidden treasure.',
-    mapsUrl:'https://www.google.com/maps/place/Madame+Hortense/@45.3957236,-72.732648,17z', rating:4, ratingLabel:'Charm' },
+    mapsUrl:'https://www.google.com/maps/place/Madame+Hortense/@45.3957236,-72.732648,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9ce478f430ad9:0xfcce58e23dc6dfd0!8m2!3d45.3957236!4d-72.732648!16s%2Fg%2F1tj45j9w',
+    rating:4, ratingLabel:'Charm' },
 
-  { id:'c10', name:'The Pleasant Hotel & Café', town:'Sutton', category:'cafe', lat:45.1070335, lng:-72.6146832,
+  { id:'c10', name:'The Pleasant Hotel & Café', town:'Sutton', category:'cafe',
+    lat:45.1070335, lng:-72.6146832,
     description:'Contemporary café inside a boutique hotel. Micro-roasted coffee and a gourmet menu featuring local flavours.',
-    mapsUrl:'https://www.google.com/maps/place/Le+Pleasant+H%C3%B4tel,+Sutton/@45.1070335,-72.6146832,17z', rating:3, ratingLabel:'Charm' },
+    mapsUrl:'https://www.google.com/maps/place/Le+Pleasant+H%C3%B4tel,+Sutton/@45.1070335,-72.6146832,17z/data=!3m1!5s0x4cb61e7c666ff6fd:0x2ef0b733d113521e!4m9!3m8!1s0x4cb61e7c6522f2c5:0xc0568ae1fa0c4c8f!5m2!4m1!1i2!8m2!3d45.1070335!4d-72.6146832!16s%2Fg%2F1tdp01qt',
+    rating:3, ratingLabel:'Charm' },
 
-  { id:'c11', name:'Espace Boho', town:'Waterloo', category:'cafe', lat:45.3433219, lng:-72.5158261,
+  { id:'c11', name:'Espace Boho', town:'Waterloo', category:'cafe',
+    lat:45.3433219, lng:-72.5158261,
     description:'Café-boutique with coffee drinks, light meals and a basement thrift shop for vintage finds.',
-    mapsUrl:'https://www.google.com/maps/place/Espace+Boho/@45.3433219,-72.5158261,17z', rating:3, ratingLabel:'Charm' },
+    mapsUrl:'https://www.google.com/maps/place/Espace+Boho/@45.3433219,-72.5158261,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9e7edca89c847:0x403490171e7e3e3c!8m2!3d45.3433219!4d-72.5158261!16s%2Fg%2F11fs32y27v',
+    rating:3, ratingLabel:'Charm' },
 
-  { id:'c12', name:'L\'Oeuf / Auberge L\'Oeuf', town:'Mystic', category:'cafe', lat:45.1540547, lng:-72.986941,
-    description:'Café-inn that roasts coffee on site in a charming setting near heritage attractions like the 12-sided Walbridge Barn and Missisquoi Museum.',
-    mapsUrl:'https://www.google.com/maps/place/L\'Oeuf/@45.1540547,-72.986941,17z', rating:4, ratingLabel:'Charm' },
+  { id:'c12', name:'L\'Oeuf / Auberge L\'Oeuf', town:'Mystic', category:'cafe',
+    lat:45.1540547, lng:-72.986941,
+    description:'Café-inn that roasts coffee on site in a charming setting near the 12-sided Walbridge Barn and Missisquoi Museum.',
+    mapsUrl:'https://www.google.com/maps/place/L\'Oeuf/@45.1540547,-72.986941,17z/data=!4m9!3m8!1s0x4cc9ec748ef9af4f:0x51495f51ce858c6f!5m2!4m1!1i2!8m2!3d45.1540547!4d-72.986941!16s%2Fg%2F1tg2d39c',
+    rating:4, ratingLabel:'Charm' },
 
-  { id:'c13', name:'La Shop', town:'Magog', category:'cafe', lat:45.2626744, lng:-72.1396346,
+  { id:'c13', name:'La Shop', town:'Magog', category:'cafe',
+    lat:45.2626744, lng:-72.1396346,
     description:'Casual café-bar popular for grilled-cheese sandwiches and café au lait. Warm atmosphere ideal for post-ride relaxation.',
-    mapsUrl:'https://www.google.com/maps/place/La+Shop/@45.2626744,-72.1396346,17z', rating:3, ratingLabel:'Charm' },
+    mapsUrl:'https://www.google.com/maps/place/La+Shop/@45.2626744,-72.1396346,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb637fbb992937b:0x7f7974003f3319a9!8m2!3d45.2626744!4d-72.1396346!16s%2Fg%2F1tgfczgt',
+    rating:3, ratingLabel:'Charm' },
 
-  // ── FARM-TO-TABLE ──
-  { id:'ft1', name:'Les Cocagnes', town:'Frelighsburg', category:'farm-table', lat:45.0591051, lng:-72.827313,
+  // ── FARM-TO-TABLE ──────────────────────
+  { id:'ft1', name:'Les Cocagnes', town:'Frelighsburg', category:'farm-table',
+    lat:45.0591051, lng:-72.827313,
     description:'Agro-ecological collective farm hosting a country-style table in summer (mid-June to late September). Twenty-one guest chefs prepare five-course meals under a pergola using the farm\'s organic vegetables, with wine, cider or beer pairings.',
-    mapsUrl:'https://www.google.com/maps/place/Les+Cocagnes/@45.0591051,-72.827313,17z', rating:5, ratingLabel:'Charm' },
+    mapsUrl:'https://www.google.com/maps/place/Les+Cocagnes/@45.0591051,-72.827313,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9e56b118136b5:0xf86cf8f56fddba6c!8m2!3d45.0591051!4d-72.827313!16s%2Fg%2F11pwdtx3c_',
+    rating:5, ratingLabel:'Charm' },
 
-  { id:'ft2', name:'L\'Espace Old Mill', town:'Stanbridge East', category:'farm-table', lat:45.1202462, lng:-72.9153428,
+  { id:'ft2', name:'L\'Espace Old Mill', town:'Stanbridge East', category:'farm-table',
+    lat:45.1202462, lng:-72.9153428,
     description:'Farm, restaurant and inn overseen by market gardener Jean-Martin Fortier and Chef Éric Gendron. Michelin Green Star. Five-course tasting menu based on produce from its gardens and the Brome-Missisquoi region.',
-    mapsUrl:'https://www.google.com/maps/place/Espace+Old+Mill/@45.1202462,-72.9153428,17z', rating:5, ratingLabel:'Charm' },
+    mapsUrl:'https://www.google.com/maps/place/Espace+Old+Mill/@45.1202462,-72.9153428,17z/data=!3m1!4b1!4m6!3m5!1s0x4cc9efb53f3c97fb:0xecbee171f4c73e18!8m2!3d45.1202462!4d-72.9153428!16s%2Fg%2F11tn6s0frm',
+    rating:5, ratingLabel:'Charm' },
 
-  { id:'ft3', name:'Ferme Au pied levé', town:'Magog', category:'farm-table', lat:45.1774988, lng:-72.14069,
+  { id:'ft3', name:'Ferme Au pied levé', town:'Magog', category:'farm-table',
+    lat:45.1774988, lng:-72.14069,
     description:'Working farm raising Highland cattle, pigs, goats and geese. Six-course gourmet dinner and hearty breakfast (BYOB). Guests can stroll the grounds and meet the animals.',
-    mapsUrl:'https://www.google.com/maps/place/Ferme+Au+Pied+Lev%C3%A9/@45.1774988,-72.14069,17z', rating:4, ratingLabel:'Charm' },
+    mapsUrl:'https://www.google.com/maps/place/Ferme+Au+Pied+Lev%C3%A9/@45.1774988,-72.14069,17z/data=!4m9!3m8!1s0x4cb640d2e15632f9:0xebc90d894424d9d2!5m2!4m1!1i2!8m2!3d45.1774988!4d-72.14069!16s%2Fg%2F11bbyhfbkp',
+    rating:4, ratingLabel:'Charm' },
 
-  { id:'ft4', name:'Les Mal-Aimés', town:'Cookshire-Eaton', category:'farm-table', lat:45.3706231, lng:-71.5990644,
+  { id:'ft4', name:'Les Mal-Aimés', town:'Cookshire-Eaton', category:'farm-table',
+    lat:45.3706231, lng:-71.5990644,
     description:'Michelin-recommended. Seven- or ten-course dinners, four-course lunches and picnic baskets. Chefs Daniel Charbonneau and Yannick Côté showcase boreal ingredients and produce from their market farm Le Jardinier Déchaîné.',
-    mapsUrl:'https://www.google.com/maps/place/Restaurant+Les+Mal-aim%C3%A9s/@45.3706231,-71.5990644,17z', rating:4, ratingLabel:'Charm' },
+    mapsUrl:'https://www.google.com/maps/place/Restaurant+Les+Mal-aim%C3%A9s/@45.3706231,-71.5990644,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb701e86627b4d1:0x81dc36502464ea50!8m2!3d45.3706231!4d-71.5990644!16s%2Fg%2F11svbs94lw',
+    rating:4, ratingLabel:'Charm' },
 
-  { id:'ft5', name:'Parcelles', town:'Austin', category:'farm-table', lat:45.2038934, lng:-72.2390176,
+  { id:'ft5', name:'Parcelles', town:'Austin', category:'farm-table',
+    lat:45.2038934, lng:-72.2390176,
     description:'Vegetable farm and table champêtre. Wood-oven pizzas, natural wines and garden-fresh crudités. Open Fridays to Sundays midday to sunset. Dine in the fields or inside a shelter on rainy days.',
-    mapsUrl:'https://www.google.com/maps/place/Parcelles/@45.2038934,-72.2390176,17z', rating:4, ratingLabel:'Charm' },
+    mapsUrl:'https://www.google.com/maps/place/Parcelles/@45.2038934,-72.2390176,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb639c04e836445:0xfca0c9ee4c39d5d8!8m2!3d45.2038934!4d-72.2390176!16s%2Fg%2F11nmm_vd11',
+    rating:4, ratingLabel:'Charm' },
 
-  { id:'ft6', name:'Jardins Bolton', town:'Bolton-Est', category:'farm-table', lat:45.2119846, lng:-72.3551233,
+  { id:'ft6', name:'Jardins Bolton', town:'Bolton-Est', category:'farm-table',
+    lat:45.2119846, lng:-72.3551233,
     description:'Open-air gastronomic evenings on a hilltop with views of fields, mountains and a river. Share a large communal table while chefs cook over an open fire. Weekly-changing menu celebrating local ingredients.',
-    mapsUrl:'https://www.google.com/maps/place/Les+Jardins+Bolton/@45.2119846,-72.3551233,17z', rating:5, ratingLabel:'Charm' },
+    mapsUrl:'https://www.google.com/maps/place/Les+Jardins+Bolton/@45.2119846,-72.3551233,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb63dba288fed2b:0x659bf0bf2bde7da5!8m2!3d45.2119846!4d-72.3551233!16s%2Fg%2F11g0gcff53',
+    rating:5, ratingLabel:'Charm' },
 ];
+
+// ─────────────────────────────────────────
+//  SCENIC DRIVE APPROXIMATE POLYLINES
+//  Traced through the key towns/vineyards mentioned for each route.
+// ─────────────────────────────────────────
+const SCENIC_PATHS = {
+  // sd1: Brome-Missisquoi Wine Route — 160 km circuit through wine country
+  'sd1': [
+    [45.1324, -72.8008], // Maison des vins, Dunham (start)
+    [45.1096, -72.8590], // Orpailleur/Gagliano, Dunham
+    [45.0814, -72.8186], // Val Caudalies
+    [45.0536, -72.8387], // Frelighsburg
+    [45.0377, -72.7934], // Clos Saragnat
+    [45.0727, -72.9349], // Saint-Armand (Domaine du Ridge)
+    [45.1191, -72.9798], // Bedford
+    [45.1540, -72.9869], // Mystic
+    [45.1215, -72.9157], // Stanbridge East
+    [45.1991, -72.7492], // Cowansville
+    [45.2347, -72.8548], // Brigham (Vignoble de la Bauge)
+    [45.2848, -72.9889], // Farnham
+    [45.2532, -72.7353], // Vignoble Bromont
+    [45.3157, -72.6424], // Bromont
+    [45.2622, -72.5887], // Léon Courville / Lac-Brome
+    [45.2199, -72.5119], // Knowlton
+    [45.1071, -72.6147], // Sutton
+    [45.0236, -72.5833], // Château Ste-Agnès
+    [45.0992, -72.7114], // Vignoble du Ruisseau
+    [45.1324, -72.8008], // back to Dunham
+  ],
+  // sd2: Townships Trail — 430 km W→E heritage route
+  'sd2': [
+    [45.3974, -72.7161], // Granby (western end)
+    [45.3334, -72.6499], // Bromont
+    [45.2199, -72.5119], // Knowlton
+    [45.3433, -72.5158], // Waterloo
+    [45.3306, -72.3030], // Eastman
+    [45.2658, -72.1583], // Magog
+    [45.2755, -71.9731], // North Hatley
+    [45.3955, -71.9466], // Sherbrooke
+    [45.5628, -72.0191], // Windsor
+    [45.6649, -72.1480], // Richmond
+    [45.6834, -71.7028], // Saint-Camille
+    [45.4098, -71.6345], // Cookshire-Eaton
+    [45.5750, -70.8813], // Lac-Mégantic
+    [45.8407, -71.0891], // Lambton (eastern extent)
+  ],
+  // sd3: Route des Sommets — 193 km circuit through the highest peaks
+  'sd3': [
+    [45.4247, -71.2561], // Halte du Soleil-Levant / La Patrie (start)
+    [45.5750, -70.8813], // Lac-Mégantic
+    [45.4865, -70.9038], // Piopolis
+    [45.4801, -71.2107], // Scotstown highlands
+    [45.4990, -71.5292], // Bury
+    [45.6834, -71.7028], // Saint-Camille
+    [45.6500, -71.7000], // Saint-Adrien area
+    [45.5628, -72.0191], // Windsor
+    [45.4098, -71.6345], // Cookshire-Eaton
+    [45.4247, -71.2561], // back to start
+  ],
+};
 
 // ─────────────────────────────────────────
 //  STATE
 // ─────────────────────────────────────────
-let activeCategories = new Set();  // empty = show all
+let activeCategories = new Set();
 let selectedPlaceId = null;
 let locationMarker = null;
 let locationCircle = null;
@@ -863,51 +769,44 @@ let locationCircle = null;
 // ─────────────────────────────────────────
 //  MAP INIT
 // ─────────────────────────────────────────
-const map = L.map('map', {
-  center: [45.28, -72.1],
-  zoom: 9,
-  zoomControl: false,
-});
-
+const map = L.map('map', { center: [45.28, -72.1], zoom: 9, zoomControl: false });
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   maxZoom: 19,
 }).addTo(map);
-
 L.control.zoom({ position: 'bottomright' }).addTo(map);
 
 // ─────────────────────────────────────────
-//  MARKERS & CIRCLES
+//  MARKERS  (emoji coloured pins)
 // ─────────────────────────────────────────
-const markerMap = {};   // id → L.Marker
-const circleMap = {};   // id → L.Circle (bike loops only)
+const markerMap = {};
+const circleMap = {};
 
 function makeIcon(cat) {
   const c = CATS[cat];
   return L.divIcon({
     className: '',
     html: `<div class="cat-marker" style="background:${c.color}">${c.emoji}</div>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
+    iconSize: [30, 30], iconAnchor: [15, 15],
   });
 }
 
 PLACES.forEach(p => {
-  const marker = L.marker([p.lat, p.lng], { icon: makeIcon(p.category) });
-  marker.on('click', () => openSheet(p.id));
-  marker.addTo(map);
-  markerMap[p.id] = marker;
+  const m = L.marker([p.lat, p.lng], { icon: makeIcon(p.category) });
+  m.on('click', () => openSheet(p.id));
+  m.addTo(map);
+  markerMap[p.id] = m;
 
-  // Bike loop area circle
+  // Bike loop circles: circumference ≈ loop distance (radius = dist×1000/2π)
   if (p.category === 'bike-loop' && p.distance) {
-    const radiusM = Math.round(p.distance * 155);  // rough loop radius
+    const r = Math.round(p.distance * 1000 / (2 * Math.PI));
     const circle = L.circle([p.lat, p.lng], {
-      radius: radiusM,
+      radius: r,
       color: CATS['bike-loop'].color,
       weight: 1.5,
-      dashArray: '6 4',
+      dashArray: '7 5',
       fillColor: CATS['bike-loop'].color,
-      fillOpacity: 0.06,
+      fillOpacity: 0.05,
       interactive: false,
     });
     circle.addTo(map);
@@ -916,22 +815,36 @@ PLACES.forEach(p => {
 });
 
 // ─────────────────────────────────────────
+//  SCENIC DRIVE POLYLINES
+// ─────────────────────────────────────────
+const scenicPolylines = {};
+const driveColor = CATS['scenic-drive'].color;
+
+Object.entries(SCENIC_PATHS).forEach(([id, coords]) => {
+  const poly = L.polyline(coords, {
+    color: driveColor, weight: 3, opacity: 0.75, interactive: false,
+  });
+  poly.addTo(map);
+  scenicPolylines[id] = poly;
+});
+
+// ─────────────────────────────────────────
 //  FILTER CHIPS
 // ─────────────────────────────────────────
-const filterBar = document.getElementById('filter-bar');
-
 function buildFilters() {
-  filterBar.innerHTML = '';
-  const all = document.createElement('button');
-  all.className = 'filter-chip' + (activeCategories.size === 0 ? ' active' : '');
-  all.style.background = activeCategories.size === 0 ? '#1a5e3b' : '';
-  all.textContent = 'All';
-  all.onclick = () => { activeCategories.clear(); applyFilters(); };
-  filterBar.appendChild(all);
+  const bar = document.getElementById('filter-bar');
+  bar.innerHTML = '';
+
+  const allChip = document.createElement('button');
+  allChip.className = 'filter-chip' + (activeCategories.size === 0 ? ' active' : '');
+  if (activeCategories.size === 0) allChip.style.background = '#374151';
+  allChip.textContent = 'All';
+  allChip.onclick = () => { activeCategories.clear(); applyFilters(); };
+  bar.appendChild(allChip);
 
   Object.entries(CATS).forEach(([key, meta]) => {
-    const chip = document.createElement('button');
     const on = activeCategories.has(key);
+    const chip = document.createElement('button');
     chip.className = 'filter-chip' + (on ? ' active' : '');
     if (on) chip.style.background = meta.color;
     chip.textContent = `${meta.emoji} ${meta.label}`;
@@ -940,32 +853,39 @@ function buildFilters() {
       else activeCategories.add(key);
       applyFilters();
     };
-    filterBar.appendChild(chip);
+    bar.appendChild(chip);
   });
 }
 
 function applyFilters() {
   buildFilters();
   const showAll = activeCategories.size === 0;
+
   PLACES.forEach(p => {
     const show = showAll || activeCategories.has(p.category);
     const m = markerMap[p.id];
-    if (show) { if (!map.hasLayer(m)) map.addLayer(m); }
-    else       { if (map.hasLayer(m)) map.removeLayer(m); }
-
+    show ? (!map.hasLayer(m) && map.addLayer(m)) : (map.hasLayer(m) && map.removeLayer(m));
     if (circleMap[p.id]) {
-      const cir = circleMap[p.id];
-      if (show) { if (!map.hasLayer(cir)) map.addLayer(cir); }
-      else       { if (map.hasLayer(cir)) map.removeLayer(cir); }
+      const c = circleMap[p.id];
+      show ? (!map.hasLayer(c) && map.addLayer(c)) : (map.hasLayer(c) && map.removeLayer(c));
     }
   });
+
+  // Scenic drive polylines
+  Object.entries(scenicPolylines).forEach(([id, poly]) => {
+    const show = showAll || activeCategories.has('scenic-drive');
+    show ? (!map.hasLayer(poly) && map.addLayer(poly)) : (map.hasLayer(poly) && map.removeLayer(poly));
+  });
+
+  // Close sheet if selected place no longer visible
   if (selectedPlaceId) {
     const sp = PLACES.find(x => x.id === selectedPlaceId);
     if (sp && !showAll && !activeCategories.has(sp.category)) closeSheet();
   }
-}
 
-buildFilters();
+  // Rebuild guide to reflect filter
+  if (document.getElementById('guide-view').classList.contains('active')) buildGuide();
+}
 
 // ─────────────────────────────────────────
 //  BOTTOM SHEET
@@ -981,34 +901,30 @@ function openSheet(id) {
   document.getElementById('sheet-meta').textContent =
     p.town + (p.distance ? ` · ${p.distance} km loop` : ` · ${cat.label}`);
   document.getElementById('sheet-desc').textContent = p.description;
-
-  const ratingEl = document.getElementById('sheet-rating');
-  ratingEl.textContent = p.rating ? `${p.ratingLabel} rating: ${'★'.repeat(p.rating)}${'☆'.repeat(5 - p.rating)}` : '';
+  const rEl = document.getElementById('sheet-rating');
+  rEl.textContent = p.rating
+    ? `${p.ratingLabel} rating: ${'★'.repeat(p.rating)}${'☆'.repeat(5 - p.rating)}` : '';
 
   const actions = document.getElementById('sheet-actions');
   actions.innerHTML = '';
 
   const mapsBtn = document.createElement('a');
   mapsBtn.className = 'sheet-btn';
-  mapsBtn.href = p.mapsUrl;
-  mapsBtn.target = '_blank';
-  mapsBtn.rel = 'noopener';
-  mapsBtn.innerHTML = '🗺 Maps';
+  mapsBtn.href = p.mapsUrl; mapsBtn.target = '_blank'; mapsBtn.rel = 'noopener';
+  mapsBtn.textContent = '🗺 Maps';
   actions.appendChild(mapsBtn);
 
   if (p.routeUrl) {
     const routeBtn = document.createElement('a');
     routeBtn.className = 'sheet-btn';
-    routeBtn.href = p.routeUrl;
-    routeBtn.target = '_blank';
-    routeBtn.rel = 'noopener';
-    routeBtn.innerHTML = '🚴 Route';
+    routeBtn.href = p.routeUrl; routeBtn.target = '_blank'; routeBtn.rel = 'noopener';
+    routeBtn.textContent = '🚴 Route';
     actions.appendChild(routeBtn);
   }
 
   const guideBtn = document.createElement('button');
-  guideBtn.className = 'sheet-btn primary';
-  guideBtn.innerHTML = '📋 Guide';
+  guideBtn.className = 'sheet-btn';   // plain white — no green
+  guideBtn.textContent = '📋 Guide';
   guideBtn.onclick = () => viewInGuide(id);
   actions.appendChild(guideBtn);
 
@@ -1024,6 +940,9 @@ function closeSheet() {
 
 function viewInGuide(id) {
   closeSheet();
+  activeCategories.clear();   // show all categories in guide
+  buildFilters();
+  buildGuide();
   showTab('guide');
   setTimeout(() => {
     const el = document.getElementById('guide-entry-' + id);
@@ -1042,12 +961,16 @@ function buildGuide() {
   const view = document.getElementById('guide-view');
   view.innerHTML = '';
 
-  const intro = document.createElement('div');
-  intro.className = 'guide-intro';
-  intro.textContent = 'Eastern Townships — Cantons-de-l\'Est. A comprehensive guide for a 4–5 day road trip through Quebec\'s wine country, breweries, cycling routes and charming villages south of Montréal.';
-  view.appendChild(intro);
+  const showAll = activeCategories.size === 0;
+  const catsToShow = Object.keys(CATS).filter(k => showAll || activeCategories.has(k));
 
-  Object.entries(CATS).forEach(([key, meta]) => {
+  if (!catsToShow.length) {
+    view.innerHTML = '<div class="guide-empty">No categories selected.</div>';
+    return;
+  }
+
+  catsToShow.forEach(key => {
+    const meta = CATS[key];
     const places = PLACES.filter(p => p.category === key);
     if (!places.length) return;
 
@@ -1059,8 +982,7 @@ function buildGuide() {
     header.innerHTML = `
       <div class="guide-section-swatch" style="background:${meta.color}"></div>
       <div class="guide-section-label">${meta.emoji} ${meta.label}</div>
-      <div class="guide-section-count">${places.length}</div>
-    `;
+      <div class="guide-section-count">${places.length}</div>`;
     section.appendChild(header);
 
     places.forEach(p => {
@@ -1071,9 +993,8 @@ function buildGuide() {
       let links = `<a class="guide-link" href="${p.mapsUrl}" target="_blank" rel="noopener">Google Maps ↗</a>`;
       if (p.routeUrl) links += `<a class="guide-link" href="${p.routeUrl}" target="_blank" rel="noopener">Route page ↗</a>`;
 
-      const ratingHtml = p.rating
-        ? `<div class="guide-entry-rating">${p.ratingLabel}: ${'★'.repeat(p.rating)}${'☆'.repeat(5 - p.rating)}</div>`
-        : '';
+      const rHtml = p.rating
+        ? `<div class="guide-entry-rating">${p.ratingLabel}: ${'★'.repeat(p.rating)}${'☆'.repeat(5-p.rating)}</div>` : '';
 
       entry.innerHTML = `
         <div class="guide-entry-top">
@@ -1084,34 +1005,35 @@ function buildGuide() {
           <button class="guide-map-btn" onclick="goToMap('${p.id}')">View on map →</button>
         </div>
         <div class="guide-entry-desc">${p.description}</div>
-        ${ratingHtml}
-        <div class="guide-entry-links">${links}</div>
-      `;
+        ${rHtml}
+        <div class="guide-entry-links">${links}</div>`;
       section.appendChild(entry);
     });
 
     view.appendChild(section);
   });
 
-  // Static sections
-  const cyclingNote = document.createElement('div');
-  cyclingNote.className = 'guide-static-section';
-  cyclingNote.innerHTML = `
+  // Static sections always shown
+  const cycNote = document.createElement('div');
+  cycNote.className = 'guide-static-section';
+  cycNote.innerHTML = `
     <div class="guide-section-header" style="position:static">
-      <div class="guide-section-swatch" style="background:#16A34A"></div>
+      <div class="guide-section-swatch" style="background:#1D4ED8"></div>
       <div class="guide-section-label">🧭 Cycling Route Resources</div>
     </div>
     <div class="guide-static-body">
-      Each official route page offers: <strong>Send to device with Ride with GPS</strong>, <strong>Download GPX file</strong> and <strong>Download PDF map</strong>. All loops are available on Ride with GPS with distance, elevation and a Send to Device button for cycling computers. The Brome-Missisquoi tourism board also publishes a paper map featuring about ten circuits.
-    </div>
-  `;
-  view.appendChild(cyclingNote);
+      Each official route page offers: <strong>Send to device with Ride with GPS</strong>,
+      <strong>Download GPX file</strong> and <strong>Download PDF map</strong>. All loops are
+      on Ride with GPS with distance, elevation and a Send to Device button for cycling computers.
+      The Brome-Missisquoi tourism board also publishes a paper map featuring about ten circuits.
+    </div>`;
+  view.appendChild(cycNote);
 
   const other = document.createElement('div');
   other.className = 'guide-static-section';
   other.innerHTML = `
     <div class="guide-section-header" style="position:static">
-      <div class="guide-section-swatch" style="background:#6B7280"></div>
+      <div class="guide-section-swatch" style="background:#6b7280"></div>
       <div class="guide-section-label">✨ Other Notable Experiences</div>
     </div>
     <div class="guide-static-body">
@@ -1121,18 +1043,18 @@ function buildGuide() {
         <li><strong>Heritage &amp; Literary Trails</strong> — Eastman's trail around Lake d'Argent features texts by Quebec authors; Piopolis' heritage trail has a podcast companion.</li>
         <li><strong>Frontenac National Park</strong> — Near Lambton: biking, kayaking, swimming and star-gazing along Lake Saint-François.</li>
       </ul>
-    </div>
-  `;
+    </div>`;
   view.appendChild(other);
 }
 
 function goToMap(id) {
-  showTab('map');
   const p = PLACES.find(x => x.id === id);
-  if (p) {
-    map.panTo([p.lat, p.lng]);
-    setTimeout(() => openSheet(id), 200);
-  }
+  if (!p) return;
+  activeCategories.clear();
+  applyFilters();
+  showTab('map');
+  map.panTo([p.lat, p.lng]);
+  setTimeout(() => openSheet(id), 200);
 }
 
 // ─────────────────────────────────────────
@@ -1143,10 +1065,8 @@ function showTab(tab) {
   document.getElementById('guide-view').classList.toggle('active', tab === 'guide');
   document.getElementById('tab-map').classList.toggle('active', tab === 'map');
   document.getElementById('tab-guide').classList.toggle('active', tab === 'guide');
-  if (tab === 'map') {
-    // Invalidate map size in case the view was hidden
-    setTimeout(() => map.invalidateSize(), 50);
-  }
+  if (tab === 'map') setTimeout(() => map.invalidateSize(), 50);
+  if (tab === 'guide') buildGuide();
 }
 
 // ─────────────────────────────────────────
@@ -1158,29 +1078,20 @@ function locateUser() {
     const { latitude: lat, longitude: lng, accuracy } = pos.coords;
     if (locationMarker) { map.removeLayer(locationMarker); map.removeLayer(locationCircle); }
     locationCircle = L.circle([lat, lng], {
-      radius: accuracy,
-      color: '#3b82f6',
-      weight: 1,
-      fillColor: '#3b82f6',
-      fillOpacity: 0.1,
-      interactive: false,
+      radius: accuracy, color: '#3b82f6', weight: 1,
+      fillColor: '#3b82f6', fillOpacity: 0.1, interactive: false,
     }).addTo(map);
     locationMarker = L.circleMarker([lat, lng], {
-      radius: 8,
-      color: 'white',
-      weight: 2,
-      fillColor: '#3b82f6',
-      fillOpacity: 1,
+      radius: 8, color: 'white', weight: 2, fillColor: '#3b82f6', fillOpacity: 1,
     }).addTo(map);
     map.setView([lat, lng], 12);
-  }, err => {
-    alert('Could not get location: ' + err.message);
-  });
+  }, err => alert('Could not get location: ' + err.message));
 }
 
 // ─────────────────────────────────────────
 //  INIT
 // ─────────────────────────────────────────
+buildFilters();
 buildGuide();
 </script>
 </body>
