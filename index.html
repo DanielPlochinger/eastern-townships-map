@@ -27,7 +27,26 @@
     .app-title {
       flex: 1; display: flex; align-items: center;
       padding: 0 16px; font-size: 15px; font-weight: 700; color: #1a5e3b; gap: 6px;
+      min-width: 0;
     }
+    #search-input {
+      flex: 1; border: none; outline: none; background: transparent;
+      font-size: 15px; font-weight: 700; color: #1a5e3b; font-family: inherit;
+      min-width: 0; width: 100%;
+    }
+    #search-input::placeholder { color: #1a5e3b; opacity: 0.85; }
+    /* hide browser's default × on search inputs in webkit */
+    #search-input::-webkit-search-cancel-button { -webkit-appearance: none; }
+    .guide-reload {
+      text-align: center; padding: 20px 16px 36px;
+    }
+    .guide-reload-btn {
+      padding: 10px 28px; border-radius: 8px; border: 1.5px solid #d1d5db;
+      background: white; font-size: 14px; font-weight: 500; color: #374151;
+      cursor: pointer; font-family: inherit;
+      -webkit-tap-highlight-color: transparent;
+    }
+    .guide-reload-btn:active { background: #f3f4f6; }
     .tab-btn {
       padding: 0 18px; border: none; background: transparent;
       font-size: 14px; font-weight: 600; color: #9ca3af; cursor: pointer;
@@ -183,7 +202,10 @@
 <body>
 
 <div class="tab-bar">
-  <div class="app-title"><span>🗺</span><span>Eastern Townships</span></div>
+  <div class="app-title">
+    <input type="search" id="search-input" placeholder="🗺 Eastern Townships"
+           autocomplete="off" autocorrect="off" spellcheck="false" />
+  </div>
   <button class="tab-btn active" id="tab-map" onclick="showTab('map')">Map</button>
   <button class="tab-btn" id="tab-guide" onclick="showTab('guide')">Guide</button>
 </div>
@@ -807,6 +829,7 @@ const SCENIC_PATHS = {
 // ─────────────────────────────────────────
 let activeCategories = new Set();
 let selectedPlaceId = null;
+let searchQuery = '';
 let locationMarker = null;
 let locationCircle = null;
 
@@ -969,12 +992,20 @@ function buildFilters() {
   });
 }
 
+function placeVisible(p) {
+  const catOk = activeCategories.size === 0 || activeCategories.has(p.category);
+  const q = searchQuery;
+  const searchOk = !q ||
+    p.name.toLowerCase().includes(q) ||
+    p.town.toLowerCase().includes(q);
+  return catOk && searchOk;
+}
+
 function applyFilters() {
   buildFilters();
-  const showAll = activeCategories.size === 0;
 
   PLACES.forEach(p => {
-    const show = showAll || activeCategories.has(p.category);
+    const show = placeVisible(p);
     const m = markerMap[p.id];
     show ? (!map.hasLayer(m) && map.addLayer(m)) : (map.hasLayer(m) && map.removeLayer(m));
     if (circleMap[p.id]) {
@@ -983,16 +1014,17 @@ function applyFilters() {
     }
   });
 
-  // Scenic drive polylines
-  Object.entries(scenicPolylines).forEach(([id, poly]) => {
-    const show = showAll || activeCategories.has('scenic-drive');
-    show ? (!map.hasLayer(poly) && map.addLayer(poly)) : (map.hasLayer(poly) && map.removeLayer(poly));
+  // Scenic drive polylines (not affected by text search — always show with category)
+  const showDrives = activeCategories.size === 0 || activeCategories.has('scenic-drive');
+  Object.values(scenicPolylines).forEach(poly => {
+    showDrives ? (!map.hasLayer(poly) && map.addLayer(poly))
+               : (map.hasLayer(poly) && map.removeLayer(poly));
   });
 
   // Close sheet if selected place no longer visible
   if (selectedPlaceId) {
     const sp = PLACES.find(x => x.id === selectedPlaceId);
-    if (sp && !showAll && !activeCategories.has(sp.category)) closeSheet();
+    if (sp && !placeVisible(sp)) closeSheet();
   }
 
   // Rebuild guide to reflect filter
@@ -1095,7 +1127,7 @@ function buildGuide() {
 
   catsToShow.forEach(key => {
     const meta = CATS[key];
-    const places = PLACES.filter(p => p.category === key);
+    const places = PLACES.filter(p => p.category === key && placeVisible(p));
     if (!places.length) return;
 
     const section = document.createElement('div');
@@ -1145,7 +1177,7 @@ function buildGuide() {
   cycNote.className = 'guide-static-section';
   cycNote.innerHTML = `
     <div class="guide-section-header" style="position:static">
-      <div class="guide-section-swatch" style="background:#1D4ED8"></div>
+      <div class="guide-section-swatch" style="background:${CATS['bike-loop'].color}"></div>
       <div class="guide-section-label">🧭 Cycling Route Resources</div>
     </div>
     <div class="guide-static-body">
@@ -1157,6 +1189,12 @@ function buildGuide() {
   view.appendChild(cycNote);
 
   // (Experiences are now a full CATS category — rendered above with all other sections)
+
+  // Reload button at bottom of guide
+  const reloadDiv = document.createElement('div');
+  reloadDiv.className = 'guide-reload';
+  reloadDiv.innerHTML = '<button class="guide-reload-btn" onclick="location.reload()">↻ Reload</button>';
+  view.appendChild(reloadDiv);
 }
 
 function goToMap(id) {
@@ -1205,6 +1243,12 @@ function locateUser() {
 // ─────────────────────────────────────────
 buildFilters();
 buildGuide();
+
+// Search input
+document.getElementById('search-input').addEventListener('input', function() {
+  searchQuery = this.value.trim().toLowerCase();
+  applyFilters();
+});
 </script>
 </body>
 </html>
