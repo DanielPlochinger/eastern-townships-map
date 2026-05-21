@@ -24,3 +24,16 @@ circles read better against green OSM map tiles.
 - farm-table:   #166534  (forest green)
 
 To revert: replace the CATS color values in index.html with the v1 hex codes above.
+
+## Category Added — v2 update (2026-05-21)
+- experience: #BE185D (deep raspberry/rose) — added for "Other Notable Experiences"
+  Entries: Spa Eastman, Missisquoi Museum & Walbridge Barn, Heritage & Literary Trails, Frontenac National Park
+
+## Extra Links Added (2026-05-21)
+Multi-location cafés and multi-beach lakes now have `extraLinks` arrays in PLACES data:
+- c1 Café Hubert Saint-Jean: +Sherbrooke Bourque, +Magog
+- c2 Brûlerie Faro: +Roastery, +Lennoxville
+- c6 Géogène Micro-Torréfacteur: +Magog
+- lk5 National-Park Beaches: +Lac Fraser, +Yamaska/Choinière, +Frontenac/Baie aux Rats-Musqués
+- lk6 Lake Memphrémagog: +Plage Pointe-Merry, +Plage de l'Ouest
+- lk7 Lake Massawippi: +Public Wharf

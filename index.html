@@ -66,17 +66,20 @@
     /* ── Map fills entire map-view ── */
     #map { position: absolute; inset: 0; }
 
-    /* ── Locate button ── */
-    .locate-btn {
+    /* ── Map control group (locate 📍 above + and −) ── */
+    .map-ctrl-group {
       position: absolute; bottom: calc(16px + var(--safe-bottom)); right: 12px;
-      z-index: 1000; width: 40px; height: 40px; border-radius: 8px;
-      border: none; background: white; box-shadow: 0 2px 8px rgba(0,0,0,.22);
-      cursor: pointer; font-size: 18px; display: flex; align-items: center;
-      justify-content: center; -webkit-tap-highlight-color: transparent;
+      z-index: 1000; display: flex; flex-direction: column; gap: 1px;
     }
-    .leaflet-bottom.leaflet-right {
-      bottom: calc(64px + var(--safe-bottom)); right: 12px;
+    .map-ctrl-btn {
+      width: 34px; height: 34px; border-radius: 4px;
+      border: 2px solid rgba(0,0,0,0.2); background: white;
+      box-shadow: 0 1px 5px rgba(0,0,0,.35);
+      cursor: pointer; font-size: 16px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center;
+      -webkit-tap-highlight-color: transparent; color: #333; line-height: 1;
     }
+    .map-ctrl-btn:active { background: #f0f0f0; }
 
     /* ── Custom marker ── */
     .cat-marker {
@@ -196,7 +199,11 @@
 
 <div id="map-view" class="view active">
   <div id="map"></div>
-  <button class="locate-btn" onclick="locateUser()">📍</button>
+  <div class="map-ctrl-group">
+    <button class="map-ctrl-btn" onclick="locateUser()">📍</button>
+    <button class="map-ctrl-btn" onclick="map.zoomIn()">+</button>
+    <button class="map-ctrl-btn" onclick="map.zoomOut()">−</button>
+  </div>
 </div>
 
 <div id="guide-view" class="view"></div>
@@ -234,6 +241,7 @@ const CATS = {
   'lake':         { label: 'Lakes & Beaches', emoji: '🏖️', color: '#0369A1' },
   'cafe':         { label: 'Cafés',           emoji: '☕', color: '#A16207' },
   'farm-table':   { label: 'Farm-to-Table',   emoji: '🌿', color: '#166534' },
+  'experience':   { label: 'Experiences',    emoji: '⭐', color: '#BE185D' },
 };
 
 // ─────────────────────────────────────────
@@ -568,30 +576,50 @@ const PLACES = [
 
   { id:'lk5', name:'Plage du Lac Stukely (Mont-Orford Park)', town:'Orford', category:'lake',
     lat:45.3645114, lng:-72.2370769,
-    description:'Beach inside Mont-Orford National Park on Lac Stukely. Park-managed, clean, with hiking and paddling nearby. Also within the park: Lac Fraser beach.',
-    mapsUrl:'https://www.google.com/maps/place/Plage+du+Lac+Stukely/@45.3645114,-72.2370769,15z/data=!3m1!4b1!4m6!3m5!1s0x4cb63236b6585449:0xc1f614693f9cc8f8!8m2!3d45.3645119!4d-72.2370769!16s%2Fg%2F11h1p1ct0n' },
+    description:'Beach inside Mont-Orford National Park on Lac Stukely. Park-managed, clean, with hiking and paddling nearby. Yamaska National Park has a beach at Choinière reservoir; Frontenac National Park has Baie aux Rats-Musqués on Lake Saint-François.',
+    mapsUrl:'https://www.google.com/maps/place/Plage+du+Lac+Stukely/@45.3645114,-72.2370769,15z/data=!3m1!4b1!4m6!3m5!1s0x4cb63236b6585449:0xc1f614693f9cc8f8!8m2!3d45.3645119!4d-72.2370769!16s%2Fg%2F11h1p1ct0n',
+    extraLinks:[
+      {label:'Lac Fraser (Mont-Orford)', url:'https://www.google.com/maps/place/Plage+du+Lac+Fraser/@45.3897567,-72.169498,15z/data=!3m1!4b1!4m6!3m5!1s0x4cb63365a055942d:0xda464fb728adb579!8m2!3d45.3897572!4d-72.169498!16s%2Fg%2F11j0snh2zs'},
+      {label:'Yamaska / Choinière', url:'https://www.google.com/maps/place/Yamaska+%E2%80%8B%E2%80%8BNational+Park/@45.4282166,-72.6160384,17z/data=!4m9!3m8!1s0x4cc9d395d93cca0d:0xaf423b329bcd4796!5m2!4m1!1i2!8m2!3d45.4282166!4d-72.6160384!16s%2Fm%2F05zr9y_'},
+      {label:'Frontenac / Baie aux Rats-Musqués', url:'https://www.google.com/maps/place/Baie+aux+Rats+Musqu%C3%A9s/@45.9757206,-71.1778854,15z/data=!3m1!4b1!4m6!3m5!1s0x4cb9d36b4c6916c5:0xac381fbe58fc8215!8m2!3d45.9757212!4d-71.1778854!16s%2Fg%2F11clgbmgm8'},
+    ] },
 
   { id:'lk6', name:'Lake Memphrémagog — Plage des Cantons', town:'Magog', category:'lake',
     lat:45.2708176, lng:-72.1780499,
     description:'42 km glacial lake with three public beaches in Magog. Boat rentals, cruises and watersports. Plage des Cantons is the most accessible; also Pointe-Merry and Plage de l\'Ouest.',
-    mapsUrl:'https://www.google.com/maps/place/Plage+des+Cantons/@45.2708176,-72.1780499,15z/data=!3m1!4b1!4m6!3m5!1s0x4cb6378294765291:0xf1d2017101cf97d1!8m2!3d45.2708182!4d-72.1780499!16s%2Fg%2F11h8y4p3_p' },
+    mapsUrl:'https://www.google.com/maps/place/Plage+des+Cantons/@45.2708176,-72.1780499,15z/data=!3m1!4b1!4m6!3m5!1s0x4cb6378294765291:0xf1d2017101cf97d1!8m2!3d45.2708182!4d-72.1780499!16s%2Fg%2F11h8y4p3_p',
+    extraLinks:[
+      {label:'Plage Pointe-Merry', url:'https://www.google.com/maps/place/Plage+Pointe+Merry/@45.2658491,-72.1595935,15z/data=!3m1!4b1!4m6!3m5!1s0x4cb6378c5d2c4b11:0x5e1651e9fd891d1f!8m2!3d45.2658496!4d-72.1595935!16s%2Fg%2F11j123_vww'},
+      {label:'Plage de l\'Ouest', url:'https://www.google.com/maps/place/Plage+de+Magog/@45.270998,-72.1628715,18z/data=!3m1!4b1!4m6!3m5!1s0x4cb63790317a0fa9:0xf570c5f04454a3d4!8m2!3d45.2714568!4d-72.1632646!16s%2Fg%2F1hhwpt310'},
+    ] },
 
   { id:'lk7', name:'Lake Massawippi (North Hatley)', town:'North Hatley', category:'lake',
     lat:45.2703127, lng:-71.9772867,
     description:'Deep, clear lake with swimming at North Hatley\'s wharf. Boat rentals available and the charming village is right there.',
-    mapsUrl:'https://www.google.com/maps/place/North+Hatley+Recreation+Society/@45.2703127,-71.9772867,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb64f1d6f1587c7:0xc44a11cca985a614!8m2!3d45.2703127!4d-71.9772867!16s%2Fg%2F11b5yr5w2l' },
+    mapsUrl:'https://www.google.com/maps/place/North+Hatley+Recreation+Society/@45.2703127,-71.9772867,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb64f1d6f1587c7:0xc44a11cca985a614!8m2!3d45.2703127!4d-71.9772867!16s%2Fg%2F11b5yr5w2l',
+    extraLinks:[
+      {label:'Public Wharf', url:'https://www.google.com/maps/place/North+Hatley,+QC+J0B+2C0/@45.2705334,-71.9800334,15z/data=!3m1!4b1!4m6!3m5!1s0x4cb64eef0a69e511:0x286c8173685f0741!8m2!3d45.2754852!4d-71.9731101!16zL20vMDdnc2tq'},
+    ] },
 
   // ── CAFÉS ──────────────────────────────
   { id:'c1', name:'Café Hubert Saint-Jean', town:'Sherbrooke / Magog', category:'cafe',
     lat:45.3991722, lng:-71.8967883,
     description:'The region\'s oldest roaster (1923), producing about 60,000 pounds of coffee annually. Ensures fair pay for Honduran growers. Multiple locations in Sherbrooke and Magog.',
     mapsUrl:'https://www.google.com/maps/place/Caf%C3%A9+Hubert+Saint-Jean/@45.3991722,-71.8967883,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7b368da89785b:0x68f0c57577a95cf4!8m2!3d45.3991722!4d-71.8967883!16s%2Fg%2F1tdzw9qf',
+    extraLinks:[
+      {label:'Sherbrooke Bourque', url:'https://www.google.com/maps/place/Hubert+St-Jean/@45.3727806,-71.9864879,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb64b3c7878377d:0xbb68d291a986d55c!8m2!3d45.3727806!4d-71.9864879!16s%2Fg%2F11b5wkyggt'},
+      {label:'Magog', url:'https://www.google.com/maps/place/Caf%C3%A9+Hubert+Saint-Jean+-+Magog/@45.266335,-72.1545627,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb63757493e0aeb:0xa371b0cf7f81041b!8m2!3d45.266335!4d-72.1545627!16s%2Fg%2F11sycvyp4f'},
+    ],
     rating:4, ratingLabel:'Charm' },
 
   { id:'c2', name:'Brûlerie Faro', town:'Sherbrooke', category:'cafe',
     lat:45.404276, lng:-71.89198,
     description:'Established in 1982 with multiple shops. Classic, sustainable and limited-edition blends. Recently adopted biodegradable cups and waste-reduction measures.',
     mapsUrl:'https://www.google.com/maps/place/Br%C3%BBlerie+FARO/@45.404276,-71.89198,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7b30ec11de81b:0x51e9c213a84b96cf!8m2!3d45.404276!4d-71.89198!16s%2Fg%2F1tfm11lt',
+    extraLinks:[
+      {label:'Roastery', url:'https://www.google.com/maps/place/Caf%C3%A9+Faro+inc.+-+Centre+de+torr%C3%A9faction/@45.3906875,-71.9380141,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7b4a78360a5e1:0xe29cec6c33090981!8m2!3d45.3906875!4d-71.9380141!16s%2Fg%2F1tcvbhfc'},
+      {label:'Lennoxville', url:'https://www.google.com/maps/place/Br%C3%BBlerie+FARO/@45.3672532,-71.856421,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7b2b2834ae81d:0x1f1f8ddd3cced80b!8m2!3d45.3672532!4d-71.856421!16s%2Fg%2F1th86qvl'},
+    ],
     rating:3, ratingLabel:'Charm' },
 
   { id:'c3', name:'Brûlerie Virgin Hill', town:'Brome Lake / Foster', category:'cafe',
@@ -616,6 +644,9 @@ const PLACES = [
     lat:45.407862, lng:-71.8769014,
     description:'Ethical micro-roaster with locations in Sherbrooke and Magog. About ten blends with conscientious sourcing practices.',
     mapsUrl:'https://www.google.com/maps/place/G%C3%A9og%C3%A8ne+Micro-torr%C3%A9facteur/@45.407862,-71.8769014,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb7b3c9052199a9:0xed4ed60d08968f3f!8m2!3d45.407862!4d-71.8769014!16s%2Fg%2F11fwh0qwjt',
+    extraLinks:[
+      {label:'Magog', url:'https://www.google.com/maps/place/G%C3%A9og%C3%A8ne+Caf%C3%A9+-+Magog/@45.2654896,-72.1513491,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb637326eeeacef:0x8fd792d61e01387f!8m2!3d45.2654896!4d-72.1513491!16s%2Fg%2F11s46brnql'},
+    ],
     rating:3, ratingLabel:'Charm' },
 
   { id:'c7', name:'Appalaches Torréfacteur', town:'Mansonville', category:'cafe',
@@ -696,6 +727,28 @@ const PLACES = [
     description:'Open-air gastronomic evenings on a hilltop with views of fields, mountains and a river. Share a large communal table while chefs cook over an open fire. Weekly-changing menu celebrating local ingredients.',
     mapsUrl:'https://www.google.com/maps/place/Les+Jardins+Bolton/@45.2119846,-72.3551233,17z/data=!3m1!4b1!4m6!3m5!1s0x4cb63dba288fed2b:0x659bf0bf2bde7da5!8m2!3d45.2119846!4d-72.3551233!16s%2Fg%2F11g0gcff53',
     rating:5, ratingLabel:'Charm' },
+
+  // ── OTHER NOTABLE EXPERIENCES ──────────
+  { id:'ex1', name:'Spa Eastman', town:'Eastman', category:'experience',
+    lat:45.296, lng:-72.340,
+    description:'One of the world\'s leading destination spas, set amid ponds and wooded trails in Eastman. Offers baths, relaxation zones, massages, yoga and guided nature walks.',
+    mapsUrl:'https://www.google.com/maps/place/Spa+Eastman/@45.296,-72.340,17z/' },
+
+  { id:'ex2', name:'Missisquoi Museum & Walbridge Barn', town:'Stanbridge East / Mystic', category:'experience',
+    lat:45.1224, lng:-72.9168,
+    description:'Regional heritage complex showcasing Missisquoi history. The Cornell Mill and Hodge\'s General Store are in Stanbridge East. The unique 12-sided Walbridge Barn in nearby Mystic is part of the same complex.',
+    mapsUrl:'https://www.google.com/maps/place/Missisquoi+Museum/@45.1224,-72.9168,17z/' },
+
+  { id:'ex3', name:'Heritage & Literary Trails', town:'Eastman & Piopolis', category:'experience',
+    lat:45.305, lng:-72.305,
+    description:'Two distinct trails. In Eastman, a heritage circuit around Lake d\'Argent features texts by Quebec authors at each stop along the route. In Piopolis (Lake Mégantic), a heritage trail explores local history with a podcast companion.',
+    mapsUrl:'https://www.google.com/maps/place/Eastman,+QC/@45.305,-72.305,14z/' },
+
+  { id:'ex4', name:'Frontenac National Park', town:'Near Lambton', category:'experience',
+    lat:45.875, lng:-71.175,
+    description:'Near Lambton on Lake Saint-François. Activities include hiking, cycling, kayaking, swimming and star-gazing. One of Quebec\'s least-visited national parks — exceptional solitude, wildlife and a beach at Baie aux Rats-Musqués.',
+    mapsUrl:'https://www.google.com/maps/place/Parc+national+de+Frontenac/@45.875,-71.175,12z/' },
+
 ];
 
 // ─────────────────────────────────────────
@@ -726,11 +779,10 @@ const SCENIC_PATHS = {
     [45.0992, -72.7114], // Vignoble du Ruisseau
     [45.1324, -72.8008], // back to Dunham
   ],
-  // sd2: Townships Trail — 430 km W→E heritage route
+  // sd2: Townships Trail — 430 km W→E heritage route (Granby → Lambton)
   'sd2': [
     [45.3974, -72.7161], // Granby (western end)
     [45.3334, -72.6499], // Bromont
-    [45.2199, -72.5119], // Knowlton
     [45.3433, -72.5158], // Waterloo
     [45.3306, -72.3030], // Eastman
     [45.2658, -72.1583], // Magog
@@ -740,21 +792,20 @@ const SCENIC_PATHS = {
     [45.6649, -72.1480], // Richmond
     [45.6834, -71.7028], // Saint-Camille
     [45.4098, -71.6345], // Cookshire-Eaton
-    [45.5750, -70.8813], // Lac-Mégantic
     [45.8407, -71.0891], // Lambton (eastern extent)
   ],
   // sd3: Route des Sommets — 193 km circuit through the highest peaks
+  // Counterclockwise: La Patrie → east to Lac-Mégantic → west through highlands → Windsor → back SE
   'sd3': [
-    [45.4247, -71.2561], // Halte du Soleil-Levant / La Patrie (start)
-    [45.5750, -70.8813], // Lac-Mégantic
-    [45.4865, -70.9038], // Piopolis
-    [45.4801, -71.2107], // Scotstown highlands
-    [45.4990, -71.5292], // Bury
-    [45.6834, -71.7028], // Saint-Camille
-    [45.6500, -71.7000], // Saint-Adrien area
-    [45.5628, -72.0191], // Windsor
+    [45.4247, -71.2561], // La Patrie (start)
+    [45.5750, -70.8813], // Lac-Mégantic (northeast)
+    [45.4865, -70.9038], // Piopolis (south shore)
+    [45.4801, -71.2107], // Scotstown highlands (west)
+    [45.4990, -71.5292], // Bury (west)
     [45.4098, -71.6345], // Cookshire-Eaton
-    [45.4247, -71.2561], // back to start
+    [45.6834, -71.7028], // Saint-Camille (north)
+    [45.5628, -72.0191], // Windsor (northwest)
+    [45.4247, -71.2561], // back to La Patrie
   ],
 };
 
@@ -774,7 +825,7 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
   attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
   maxZoom: 19,
 }).addTo(map);
-L.control.zoom({ position: 'bottomright' }).addTo(map);
+// Zoom handled by custom .map-ctrl-group buttons
 
 // ─────────────────────────────────────────
 //  MARKERS  (emoji coloured pins)
@@ -902,8 +953,15 @@ function openSheet(id) {
     p.town + (p.distance ? ` · ${p.distance} km loop` : ` · ${cat.label}`);
   document.getElementById('sheet-desc').textContent = p.description;
   const rEl = document.getElementById('sheet-rating');
-  rEl.textContent = p.rating
-    ? `${p.ratingLabel} rating: ${'★'.repeat(p.rating)}${'☆'.repeat(5 - p.rating)}` : '';
+  let rHtml = p.rating
+    ? `<div>${p.ratingLabel} rating: ${'★'.repeat(p.rating)}${'☆'.repeat(5 - p.rating)}</div>` : '';
+  if (p.extraLinks && p.extraLinks.length) {
+    rHtml += '<div style="display:flex;flex-wrap:wrap;gap:10px;margin-top:6px;">' +
+      p.extraLinks.map(el =>
+        `<a href="${el.url}" target="_blank" rel="noopener" style="font-size:12px;color:#1a5e3b;text-decoration:none;font-weight:500;">${el.label} ↗</a>`
+      ).join('') + '</div>';
+  }
+  rEl.innerHTML = rHtml;
 
   const actions = document.getElementById('sheet-actions');
   actions.innerHTML = '';
@@ -992,6 +1050,9 @@ function buildGuide() {
 
       let links = `<a class="guide-link" href="${p.mapsUrl}" target="_blank" rel="noopener">Google Maps ↗</a>`;
       if (p.routeUrl) links += `<a class="guide-link" href="${p.routeUrl}" target="_blank" rel="noopener">Route page ↗</a>`;
+      if (p.extraLinks) p.extraLinks.forEach(el => {
+        links += `<a class="guide-link" href="${el.url}" target="_blank" rel="noopener">${el.label} ↗</a>`;
+      });
 
       const rHtml = p.rating
         ? `<div class="guide-entry-rating">${p.ratingLabel}: ${'★'.repeat(p.rating)}${'☆'.repeat(5-p.rating)}</div>` : '';
@@ -1029,22 +1090,7 @@ function buildGuide() {
     </div>`;
   view.appendChild(cycNote);
 
-  const other = document.createElement('div');
-  other.className = 'guide-static-section';
-  other.innerHTML = `
-    <div class="guide-section-header" style="position:static">
-      <div class="guide-section-swatch" style="background:#6b7280"></div>
-      <div class="guide-section-label">✨ Other Notable Experiences</div>
-    </div>
-    <div class="guide-static-body">
-      <ul>
-        <li><strong>Spa Eastman</strong> — One of the world's leading spas, in Eastman, with ponds and wooded trails.</li>
-        <li><strong>Missisquoi Museum &amp; Walbridge Barn</strong> — In Stanbridge East: Cornell Mill, Hodge's General Store and the unique 12-sided barn in Mystic.</li>
-        <li><strong>Heritage &amp; Literary Trails</strong> — Eastman's trail around Lake d'Argent features texts by Quebec authors; Piopolis' heritage trail has a podcast companion.</li>
-        <li><strong>Frontenac National Park</strong> — Near Lambton: biking, kayaking, swimming and star-gazing along Lake Saint-François.</li>
-      </ul>
-    </div>`;
-  view.appendChild(other);
+  // (Experiences are now a full CATS category — rendered above with all other sections)
 }
 
 function goToMap(id) {
