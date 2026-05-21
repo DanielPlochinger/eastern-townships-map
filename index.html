@@ -823,28 +823,20 @@ L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
 // Tap-to-close: a genuine stationary tap closes the sheet; drag and pinch do not.
 // We track touch movement ourselves because Leaflet's drag threshold (~3px) is
 // too small on mobile — a tiny finger wobble fires 'click' after a drag attempt.
-let _touchDragged = false;
-let _touchOrigin  = null;
-const _mapEl = document.getElementById('map');
-_mapEl.addEventListener('touchstart', e => {
-  _touchDragged = false;
-  _touchOrigin = e.touches.length === 1
-    ? { x: e.touches[0].clientX, y: e.touches[0].clientY } : null;
-}, { passive: true });
-_mapEl.addEventListener('touchmove', e => {
-  if (!_touchOrigin || e.touches.length !== 1) { _touchDragged = true; return; }
-  const d = Math.hypot(e.touches[0].clientX - _touchOrigin.x,
-                       e.touches[0].clientY - _touchOrigin.y);
-  if (d > 6) _touchDragged = true;
-}, { passive: true });
-// Leaflet fires 'click' after a tap (and sometimes after tiny drags).
-// Ignore it when the user actually moved their finger.
-map.on('click', () => {
-  const dragged = _touchDragged;
-  _touchDragged = false;
-  if (dragged) return;
-  if (selectedPlaceId) closeSheet();
-});
+// Close the sheet when the user clicks/taps anywhere outside it.
+// Using capture phase (true) so this runs before Leaflet's own handlers.
+// The browser does NOT fire 'click' after a real drag (desktop or mobile),
+// so this naturally ignores pans and pinch-zooms.
+document.addEventListener('click', function(e) {
+  if (!selectedPlaceId) return;
+  const sheet = document.getElementById('bottom-sheet');
+  if (sheet.contains(e.target)) return;                        // click was on the card
+  if (e.target.closest && (
+    e.target.closest('.cat-marker') ||                         // emoji pin
+    e.target.closest('.leaflet-interactive')                   // circle, polyline, etc.
+  )) return;
+  closeSheet();
+}, true);
 
 // ─────────────────────────────────────────
 //  MARKERS  (emoji coloured pins)
