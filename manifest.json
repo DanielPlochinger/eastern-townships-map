@@ -1,0 +1,12 @@
+{
+  "name": "Eastern Townships",
+  "short_name": "Townships",
+  "start_url": "/eastern-townships-map/",
+  "display": "standalone",
+  "background_color": "#1a5e3b",
+  "theme_color": "#1a5e3b",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}
